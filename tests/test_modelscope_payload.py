@@ -132,6 +132,16 @@ class ImageApiEditTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('yFt="gpt-5.4-nano"', cowart_source)
         self.assertIn("CowartSourceRef", cowart_source)
 
+    def test_completed_ai_holder_does_not_keep_generation_sweep(self):
+        root = os.path.join(os.path.dirname(__file__), "..")
+        with open(os.path.join(root, "static", "cowart", "assets", "index-ChYAZ9ph.js"), encoding="utf-8") as f:
+            cowart_source = f.read()
+
+        self.assertIn("function CowartAiHolderComplete", cowart_source)
+        self.assertIn("CowartAiHolderComplete(ed,s.id)", cowart_source)
+        self.assertIn("function CowartClearCompletedAiHolders", cowart_source)
+        self.assertIn("CowartClearCompletedAiHolders(ed)", cowart_source)
+
 
 class ModelScopePayloadTests(unittest.TestCase):
     def test_data_uri_uses_base64_images_field(self):
