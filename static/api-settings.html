@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/logo.png" type="image/png">
+    <title>API SETTINGS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/static/theme.js?v=20260509"></script>
+    <style>
+        body{margin:0;min-height:100vh;background:#f8fafc;color:#111827;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+        .page{max-width:1280px;margin:0 auto;padding:24px 28px 80px}
+        header{display:none}
+        .page-title,.sub{display:none!important}
+        .layout{display:grid;grid-template-columns:1fr;gap:18px;margin-top:0}
+        .block{background:#fff;border:1px solid #e0e0e0;border-radius:16px;padding:18px;box-shadow:none}
+        .block-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+        .block-title{font-size:13px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
+        .form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+        label{display:flex;flex-direction:column;gap:7px;font-size:11px;font-weight:900;color:#64748b;letter-spacing:.08em;text-transform:uppercase}
+        input,select{height:42px;border:1px solid #e0e0e0;border-radius:14px;background:#fff;color:#111827;outline:none;padding:0 12px;font-size:13px;font-weight:700;letter-spacing:0;text-transform:none;box-shadow:none}
+        input:focus,select:focus{border-color:#cfd4dc;background:#fff;box-shadow:0 0 0 3px rgba(31,41,55,.08)}
+        .full{grid-column:1/-1}
+        .actions{display:flex;align-items:center;gap:10px;margin-top:18px}
+        .btn{height:42px;padding:0 16px;border-radius:999px;background:#111827;color:#fff;font-size:12px;font-weight:900;display:inline-flex;align-items:center;gap:8px}
+        .ghost{background:#fff;color:#334155;border:1px solid #e2e8f0}
+        .status{font-size:12px;font-weight:800;color:#64748b}
+        .block-head{justify-content:space-between}
+        .block-head-title{display:flex;align-items:center;gap:10px}
+        .api-list{display:flex;flex-direction:column;gap:14px}
+        .api-row{border:1px solid #e0e0e0;border-radius:16px;background:#fff;padding:14px}
+        .api-row-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+        .api-row-title{font-size:11px;font-weight:900;color:#94a3b8;letter-spacing:.18em;text-transform:uppercase}
+        .icon-btn{width:34px;height:34px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:#94a3b8;border:1px solid #e2e8f0;background:#fff}
+        .icon-btn:hover{color:#dc2626;background:#fee2e2;border-color:#fecaca}
+        html,body{scrollbar-width:none}
+        html::-webkit-scrollbar,body::-webkit-scrollbar{display:none}
+        body.studio-theme-dark{background:#08090c;color:#e8e8ea}
+        body.studio-theme-dark .page{background:#08090c}
+        body.studio-theme-dark .page-title{color:#e8e8ea}
+        body.studio-theme-dark .sub,
+        body.studio-theme-dark label,
+        body.studio-theme-dark .block-title,
+        body.studio-theme-dark .api-row-title,
+        body.studio-theme-dark .status{color:#9aa6b8}
+        body.studio-theme-dark .block,
+        body.studio-theme-dark .api-row{background:#111216;border-color:#25262b;box-shadow:none}
+        body.studio-theme-dark input,
+        body.studio-theme-dark select{background:#10141d;border-color:#2f3a4d;color:#e8e8ea}
+        body.studio-theme-dark input:focus,
+        body.studio-theme-dark select:focus{background:#111827;border-color:#d8dee9}
+        body.studio-theme-dark input::placeholder{color:#7f8a9d}
+        body.studio-theme-dark .btn{background:#d8dee9;color:#10141d}
+        body.studio-theme-dark .ghost,
+        body.studio-theme-dark .icon-btn{background:#111827;color:#d8dee9;border-color:#2f3a4d}
+        body.studio-theme-dark .icon-btn:hover{background:#241416;color:#fca5a5;border-color:#7f1d1d}
+        @media(max-width:760px){.form{grid-template-columns:1fr}.page{padding:32px 18px 60px}}
+    </style>
+    <link rel="stylesheet" href="/static/theme.css?v=20260706-lovart-pages-1">
+    <style>
+        html:has(body.api-settings-page),
+        html:not(.studio-theme-dark) body.api-settings-page:not(.login-page),
+        body.api-settings-page:not(.login-page){background:#fff!important;background-image:none!important;color:#242424!important}
+        body.api-settings-page .page{width:100%!important;max-width:none!important;margin:0!important;padding:14px 14px 72px!important;background:#fff!important;background-image:none!important}
+        body.api-settings-page .page>header,
+        body.api-settings-page .page-title,
+        body.api-settings-page .sub{display:none!important;height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important}
+        body.api-settings-page .layout{grid-template-columns:1fr!important;gap:6px!important;align-items:start!important}
+        body.api-settings-page .block{padding:10px 0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+        body.api-settings-page .block+.block{border-top:1px solid #ececea!important}
+        body.api-settings-page .block:nth-child(3){grid-column:auto!important}
+        body.api-settings-page .block-head{min-height:34px!important;margin:0 0 8px!important;gap:8px!important}
+        body.api-settings-page .block-head-title{gap:8px!important}
+        body.api-settings-page .block-head-title>svg,
+        body.api-settings-page .block-head-title>i{display:none!important}
+        body.api-settings-page .block-title{font-size:16px!important;line-height:22px!important;font-weight:650!important;letter-spacing:0!important;text-transform:none!important;color:#242424!important}
+        body.api-settings-page .form{grid-template-columns:1fr!important;gap:8px!important}
+        body.api-settings-page label{gap:5px!important;font-size:12px!important;line-height:18px!important;font-weight:500!important;letter-spacing:0!important;text-transform:none!important;color:#777773!important}
+        body.api-settings-page input,
+        body.api-settings-page select{height:34px!important;min-width:0!important;padding:0 10px!important;border:1px solid #e4e4e1!important;border-radius:8px!important;background:#fff!important;color:#242424!important;font-size:13px!important;line-height:20px!important;font-weight:500!important;letter-spacing:0!important;box-shadow:none!important}
+        body.api-settings-page input::placeholder{color:#aaa9a5!important;font-weight:500!important}
+        body.api-settings-page input:focus,
+        body.api-settings-page select:focus{border-color:#cfcfcb!important;box-shadow:0 0 0 2px rgba(36,36,36,.08)!important}
+        body.api-settings-page .api-list{gap:6px!important}
+        body.api-settings-page .api-row{padding:8px 0 0!important;border:0!important;border-top:1px solid #ececea!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+        body.api-settings-page .api-row:first-child{padding-top:0!important;border-top:0!important}
+        body.api-settings-page .api-row-head{margin-bottom:8px!important}
+        body.api-settings-page .api-row-title{font-size:13px!important;line-height:20px!important;font-weight:500!important;letter-spacing:0!important;text-transform:none!important;color:#777773!important}
+        body.api-settings-page .actions{position:static!important;bottom:auto!important;z-index:auto!important;display:flex!important;width:auto!important;max-width:100%!important;flex-wrap:wrap!important;gap:8px!important;margin:12px 0 0!important;padding:10px 0 0!important;border:0!important;border-radius:0!important;background:transparent!important;background-image:none!important;box-shadow:none!important;backdrop-filter:none!important}
+        body.api-settings-page .settings-btn{display:inline-flex!important;height:34px!important;min-height:34px!important;align-items:center!important;justify-content:center!important;padding:0 12px!important;border:0!important;border-radius:8px!important;background:#30302f!important;background-image:none!important;color:#fff!important;font-size:13px!important;line-height:20px!important;font-weight:500!important;letter-spacing:0!important;gap:0!important;box-shadow:none!important;cursor:pointer!important}
+        body.api-settings-page .settings-btn.ghost{background:transparent!important;color:#30302f!important;border:1px solid #e4e4e1!important}
+        body.api-settings-page .settings-btn svg,
+        body.api-settings-page .settings-btn i{display:none!important}
+        body.api-settings-page .icon-btn{width:28px!important;height:28px!important;border:0!important;border-radius:8px!important;background:transparent!important;color:#8a8f98!important;font-size:13px!important;font-weight:500!important}
+        body.api-settings-page .icon-btn svg,
+        body.api-settings-page .icon-btn i{display:none!important}
+        body.api-settings-page .status{font-size:12px!important;font-weight:500!important;color:#777773!important}
+        @media(max-width:760px){body.api-settings-page .layout{grid-template-columns:1fr!important}}
+    </style>
+</head>
+<body class="api-settings-page">
+    <main class="page">
+        <header hidden></header>
+        <section class="layout">
+            <div class="block">
+                <div class="block-head"><div class="block-head-title"><i data-lucide="workflow" class="w-4 h-4"></i><div class="block-title">ComfyUI 工作流</div></div></div>
+                <div class="form">
+                    <label class="full">后端地址，多个用英文逗号分隔<input id="comfyui_instances" placeholder="127.0.0.1:8188"></label>
+                    <label>Comfy 邮箱<input id="comfy_org_email" autocomplete="username"></label>
+                    <label>Comfy 登录密钥<input id="comfy_org_api_key" type="password"></label>
+                </div>
+            </div>
+            <div class="block">
+                <div class="block-head"><div class="block-head-title"><i data-lucide="image" class="w-4 h-4"></i><div class="block-title">出图 API</div></div></div>
+                <div class="form">
+                    <label class="full">Base URL<input id="image_api_base_url" placeholder="https://api.openai.com"></label>
+                    <label class="full">API Key<input id="image_api_key" type="password"></label>
+                    <label class="full">模型列表<input id="image_api_models" placeholder="gpt-image-2,nano-banana-pro"></label>
+                    <label class="full">默认模型<input id="image_api_default_model" placeholder="gpt-image-2"></label>
+                </div>
+            </div>
+            <div class="block">
+                <div class="block-head">
+                    <div class="block-head-title"><i data-lucide="message-square" class="w-4 h-4"></i><div class="block-title">LMM 对话 API</div></div>
+                    <button class="settings-btn ghost" type="button" onclick="addChatApi()">增加 API</button>
+                </div>
+                <div id="chatApiList" class="api-list"></div>
+            </div>
+            <div class="block">
+                <div class="block-head"><div class="block-head-title"><i data-lucide="cloud-upload" class="w-4 h-4"></i><div class="block-title">图床</div></div></div>
+                <div class="form">
+                    <label class="full">兰空图床地址<input id="image_host_base_url" placeholder="https://你的图床域名"></label>
+                    <label>账号<input id="image_host_username"></label>
+                    <label>密码<input id="image_host_password" type="password"></label>
+                    <label class="full">资产保存方式<select id="image_host_strategy"><option value="local">只存本地</option><option value="local_and_remote">本地 + 图床</option><option value="remote">上传图床并记录 URL</option></select></label>
+                </div>
+            </div>
+        </section>
+        <div class="actions">
+            <button class="settings-btn" type="button" onclick="saveSettings()">保存设置</button>
+            <button class="settings-btn ghost" type="button" onclick="testChat()">测试对话</button>
+            <span id="status" class="status"></span>
+        </div>
+    </main>
+    <script>
+        lucide.createIcons();
+        const ids = ['comfyui_instances','comfy_org_email','comfy_org_api_key','image_api_base_url','image_api_key','image_api_models','image_api_default_model','image_host_base_url','image_host_username','image_host_password','image_host_strategy'];
+        const chatApiList = document.getElementById('chatApiList');
+        async function loadSettings(){
+            const cfg = await fetch('/api/config').then(r => r.json());
+            applySettings(cfg);
+        }
+        function applySettings(cfg){
+            set('comfyui_instances', cfg.comfyui_instances || '');
+            set('comfy_org_email', cfg.comfy_org_email || '');
+            setSecretPlaceholder('comfy_org_api_key', cfg.has_comfy_org_api_key || cfg.has_comfy_org_auth);
+            set('image_api_base_url', cfg.image_api_base_url || '');
+            setSecretPlaceholder('image_api_key', cfg.has_image_api_key || cfg.has_api_key);
+            set('image_api_models', (cfg.image_models || []).join(','));
+            set('image_api_default_model', cfg.image_model || '');
+            renderChatApis((cfg.chat_api_endpoints && cfg.chat_api_endpoints.length) ? cfg.chat_api_endpoints : [{
+                id:'default',
+                name:'默认对话 API',
+                base_url:cfg.chat_api_base_url || '',
+                models:cfg.chat_models || [],
+                default_model:cfg.chat_model || '',
+                has_api_key:cfg.has_chat_api_key
+            }]);
+            set('image_host_base_url', cfg.image_host_base_url || '');
+            set('image_host_username', cfg.image_host_username || '');
+            setSecretPlaceholder('image_host_password', cfg.has_image_host_password);
+            set('image_host_strategy', cfg.image_host_strategy || 'local');
+        }
+        function set(id, value){ document.getElementById(id).value = value || ''; }
+        function setSecretPlaceholder(id, saved){
+            const el = document.getElementById(id);
+            if(!el) return;
+            el.value = '';
+            el.placeholder = saved ? '已保存，留空不改' : '';
+        }
+        function chatApiTemplate(item = {}, index = 0){
+            const row = document.createElement('div');
+            row.className = 'api-row';
+            row.dataset.id = item.id || '';
+            row.innerHTML = `
+                <div class="api-row-head">
+                    <div class="api-row-title">API ${index + 1}</div>
+                    <button class="icon-btn" type="button" onclick="removeChatApi(this)" title="删除 API">删除</button>
+                </div>
+                <div class="form">
+                    <label>名称<input class="chat-name" placeholder="LM Studio / 中转站" value="${escapeHtml(item.name || '')}"></label>
+                    <label>Base URL<input class="chat-base" placeholder="http://127.0.0.1:1234/v1" value="${escapeHtml(item.base_url || '')}"></label>
+                    <label>API Key，可为空<input class="chat-key" type="password" placeholder="${item.has_api_key ? '已保存，留空不改' : ''}"></label>
+                    <label>默认模型<input class="chat-default" placeholder="local-model" value="${escapeHtml(item.default_model || '')}"></label>
+                    <label class="full">模型列表，多个用英文逗号分隔<input class="chat-models" placeholder="local-model,gpt-4o" value="${escapeHtml((item.models || []).join(','))}"></label>
+                </div>
+            `;
+            return row;
+        }
+        function renderChatApis(items){
+            chatApiList.innerHTML = '';
+            (items && items.length ? items : [{}]).forEach((item, index) => chatApiList.appendChild(chatApiTemplate(item, index)));
+            updateChatApiTitles();
+            lucide.createIcons();
+        }
+        function addChatApi(){
+            chatApiList.appendChild(chatApiTemplate({name:`LMM API ${chatApiList.children.length + 1}`}, chatApiList.children.length));
+            updateChatApiTitles();
+            lucide.createIcons();
+        }
+        function removeChatApi(button){
+            if(chatApiList.children.length <= 1){ alert('至少保留一个 LMM 对话 API'); return; }
+            button.closest('.api-row').remove();
+            updateChatApiTitles();
+        }
+        function updateChatApiTitles(){
+            [...chatApiList.children].forEach((row, index) => row.querySelector('.api-row-title').textContent = `API ${index + 1}`);
+        }
+        function chatEndpoints(){
+            return [...chatApiList.children].map((row, index) => ({
+                id: row.dataset.id || '',
+                name: row.querySelector('.chat-name').value.trim() || `LMM API ${index + 1}`,
+                base_url: row.querySelector('.chat-base').value.trim(),
+                api_key: row.querySelector('.chat-key').value.trim(),
+                models: row.querySelector('.chat-models').value.trim(),
+                default_model: row.querySelector('.chat-default').value.trim()
+            })).filter(item => item.base_url);
+        }
+        function values(){
+            const data = {};
+            ids.forEach(id => data[id] = document.getElementById(id).value.trim());
+            data.chat_api_endpoints = chatEndpoints();
+            const first = data.chat_api_endpoints[0] || {};
+            data.chat_api_base_url = first.base_url || '';
+            data.chat_api_key = first.api_key || '';
+            data.chat_api_models = first.models || '';
+            data.chat_api_default_model = first.default_model || '';
+            return data;
+        }
+        async function saveSettings(){
+            const status = document.getElementById('status');
+            status.textContent = '保存中...';
+            const res = await fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(values())});
+            if(!res.ok){ status.textContent = (await res.json()).detail || '保存失败'; return; }
+            const data = await res.json();
+            if(data.config) applySettings(data.config);
+            status.textContent = '已保存';
+            try { window.parent?.postMessage({type:'api-settings-saved'}, '*'); } catch(e) {}
+        }
+        async function testChat(){
+            const status = document.getElementById('status');
+            status.textContent = '测试中...';
+            const res = await fetch('/api/settings/test-chat', {method:'POST'});
+            status.textContent = res.ok ? '对话接口可用' : ((await res.json()).detail || '测试失败');
+        }
+        function escapeHtml(str){ return String(str == null ? '' : str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+        loadSettings();
+    </script>
+</body>
+</html>

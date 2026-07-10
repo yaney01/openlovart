@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/logo.png" type="image/png">
+    <title>文生图 · 无限画布</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/static/theme.js?v=20260509-global-theme-output-drag"></script>
+    <link rel="stylesheet" href="/static/theme.css?v=20260616-responsive-atelier-3">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        :root { --bg:#f1f1ef; --panel:#fff; --panel-2:#f4f4f2; --border:#e6e6e2; --border-2:#d4d4cf; --text:#1b1c1e; --muted:#84878f; --faint:#aeb1b8; --input:#f5f5f3; --dot:#d9d9d4; --frame:#e9e9e6; --shadow:rgba(20,20,25,.14); --accent:#2a6fdb; --easing:cubic-bezier(.4,0,.2,1); }
+        * { box-sizing:border-box; }
+        html,body { width:100%; height:100%; margin:0; overflow:hidden; }
+        body { background:var(--bg); color:var(--text); font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; -webkit-font-smoothing:antialiased; }
+        button,input,select,textarea { font:inherit; }
+        button { border:0; }
+        .canvas-shell { position:relative; width:100%; height:100%; overflow:hidden; background:var(--bg); }
+        .canvas-board { position:absolute; inset:0; overflow:hidden; cursor:default; touch-action:none; background-color:var(--bg); background-image:radial-gradient(var(--dot) 1.2px, transparent 1.2px); }
+        .canvas-board.panning { cursor:grabbing; }
+        .canvas-world { position:absolute; left:0; top:0; width:1px; height:1px; transform-origin:0 0; will-change:transform; }
+        .canvas-items { position:absolute; left:0; top:0; }
+        .canvas-image-card { position:absolute; overflow:visible; border:1px solid var(--border); border-radius:11px; background:var(--panel); box-shadow:0 4px 18px var(--shadow); cursor:grab; user-select:none; }
+        .canvas-image-card.selected { border:2px solid var(--accent); }
+        .canvas-image-card > img { display:block; width:100%; height:auto; border-radius:9px; pointer-events:none; }
+        .canvas-image-actions { position:absolute; left:50%; top:-48px; display:none; align-items:center; gap:4px; padding:4px; transform:translateX(-50%); border:1px solid var(--border); border-radius:11px; background:var(--panel); box-shadow:0 12px 30px var(--shadow); white-space:nowrap; z-index:5; }
+        .canvas-image-card.selected .canvas-image-actions { display:flex; }
+        .canvas-image-actions button,.canvas-image-actions a { height:30px; padding:0 10px; display:flex; align-items:center; gap:6px; border-radius:8px; background:transparent; color:var(--text); font-size:11px; font-weight:600; text-decoration:none; cursor:pointer; }
+        .canvas-image-actions button:hover,.canvas-image-actions a:hover { background:var(--panel-2); }
+        .canvas-image-actions .delete { width:32px; padding:0; justify-content:center; color:#d64545; }
+        .canvas-image-actions .divider { width:1px; height:16px; background:var(--border); }
+        .generator-frame { position:absolute; left:0; top:0; width:440px; user-select:none; }
+        .generator-head { height:27px; padding:0 2px 6px; display:flex; align-items:center; justify-content:space-between; color:var(--accent); cursor:grab; }
+        .generator-title { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:600; }
+        .generator-size { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; font-weight:600; }
+        .generator-stage { position:relative; width:440px; height:440px; overflow:hidden; display:flex; align-items:center; justify-content:center; border:1.5px solid var(--accent); background:var(--frame); cursor:grab; }
+        .generator-placeholder,.generator-loader { display:flex; flex-direction:column; align-items:center; gap:12px; color:var(--muted); }
+        .generator-placeholder svg { width:72px; height:72px; color:var(--dot); }
+        .generator-placeholder span,.generator-loader span { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:10px; font-weight:700; letter-spacing:.18em; }
+        .generator-loader .spinner { width:28px; height:28px; border:2.5px solid var(--accent); border-top-color:transparent; border-radius:50%; animation:spin .8s linear infinite; }
+        #outputImg { width:100%; height:100%; object-fit:contain; cursor:zoom-in; }
+        #downloadBtn { position:absolute; right:14px; bottom:14px; width:38px; height:38px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); border-radius:12px; background:var(--panel); color:var(--text); box-shadow:0 8px 24px var(--shadow); }
+        .prompt-composer { position:absolute; z-index:40; width:440px; min-height:166px; padding:14px 14px 12px; display:flex; flex-direction:column; gap:10px; border:1px solid var(--border); border-radius:20px; background:var(--panel); box-shadow:0 16px 44px var(--shadow); cursor:default; }
+        .prompt-wrap { min-height:68px; }
+        #promptInput { display:block; width:100%; min-height:68px; max-height:148px; padding:2px 4px; resize:none; overflow:auto; border:0; outline:0; background:transparent; color:var(--text); font-size:13.5px; line-height:1.6; }
+        #promptInput::placeholder { color:var(--faint); }
+        .composer-footer { display:flex; align-items:center; gap:6px; }
+        .composer-chip { height:32px; padding:0 11px; display:flex; align-items:center; gap:6px; border-radius:10px; background:transparent; color:var(--text); font-size:12px; font-weight:600; cursor:pointer; }
+        .composer-chip:hover,.composer-chip.active { background:var(--panel-2); }
+        .composer-spacer { flex:1; }
+        .provider-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); }
+        .generate-btn { height:36px; min-width:52px; padding:0 14px; display:flex; align-items:center; justify-content:center; gap:6px; border-radius:12px; background:var(--accent); color:#fff; box-shadow:0 8px 20px rgba(42,111,219,.32); cursor:pointer; transition:transform .2s,opacity .2s; }
+        .generate-btn:hover:not(:disabled) { transform:translateY(-1px); }
+        .generate-btn:disabled { opacity:.55; cursor:default; }
+        .composer-popover { position:absolute; top:calc(100% + 8px); z-index:50; display:none; border:1px solid var(--border); border-radius:16px; background:var(--panel); box-shadow:0 20px 50px var(--shadow); }
+        .composer-popover.open { display:flex; }
+        .params-popover { left:0; width:100%; padding:14px; flex-direction:column; gap:11px; }
+        .model-popover { right:0; width:250px; padding:6px; flex-direction:column; gap:2px; }
+        .popover-label { color:var(--muted); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
+        .model-option { width:100%; min-height:44px; padding:8px 10px; display:flex; align-items:center; gap:10px; border-radius:9px; background:transparent; color:var(--text); text-align:left; cursor:pointer; }
+        .model-option:hover,.model-option.active { background:var(--panel-2); }
+        .model-option .model-copy { display:flex; flex-direction:column; gap:1px; }
+        .model-option strong { font-size:12px; font-weight:600; }
+        .model-option small { color:var(--faint); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:10px; }
+        .model-popover-separator { height:1px; margin:4px 8px; background:var(--border); }
+        .auth-chip { min-height:40px; padding:8px 10px; display:flex; align-items:center; gap:10px; border-radius:9px; background:transparent; color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; }
+        .auth-chip:hover { background:var(--panel-2); color:var(--text); }
+        .auth-dot { width:7px; height:7px; border-radius:50%; background:var(--faint); }
+        .auth-chip.ready .auth-dot { background:#2fbf71; }
+        .size-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; align-items:start; }
+        .size-row.three { grid-template-columns:repeat(3,minmax(0,1fr)); }
+        .size-row.comfy-only { grid-template-columns:1fr; }
+        .size-field { min-width:0; display:flex; flex-direction:column; gap:6px; }
+        .size-select,.size-custom { width:100%; height:36px; padding:0 10px; border:1px solid var(--border); border-radius:10px; background:var(--input); color:var(--text); outline:none; font-size:11px; font-weight:600; }
+        .size-custom { display:none; }
+        .size-field.custom .size-custom { display:block; }
+        .size-pair { display:none; grid-template-columns:1fr 1fr; gap:6px; }
+        .size-field.custom .size-pair { display:grid; }
+        .size-pair .size-custom { display:block; }
+        .canvas-heading { position:absolute; left:16px; top:14px; z-index:60; display:flex; align-items:center; gap:8px; pointer-events:none; }
+        .canvas-heading strong { font-size:14px; font-weight:700; }
+        .canvas-heading span { color:var(--faint); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:9px; font-weight:700; letter-spacing:.18em; }
+        .canvas-dock { position:absolute; left:50%; bottom:18px; z-index:60; display:flex; align-items:center; gap:2px; padding:6px; transform:translateX(-50%); border:1px solid var(--border); border-radius:16px; background:var(--panel); box-shadow:0 16px 44px var(--shadow); }
+        .dock-btn { min-width:32px; height:32px; padding:0 9px; display:flex; align-items:center; justify-content:center; border-radius:9px; background:transparent; color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; }
+        .dock-btn:hover { background:var(--panel-2); color:var(--text); }
+        #zoomPct { min-width:48px; color:var(--text); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; }
+        #loadMoreTrigger { position:absolute; right:16px; top:16px; z-index:30; color:var(--faint); font-size:10px; font-weight:600; pointer-events:none; }
+        .modal-field { width:100%; height:42px; padding:0 14px; border:1px solid var(--border); border-radius:12px; background:var(--input); color:var(--text); outline:none; font-size:12px; font-weight:600; }
+        .modal-field:focus { border-color:var(--accent); background:var(--panel); }
+        .lightbox { position:fixed; inset:0; z-index:100; padding:28px; overflow:auto; background:rgba(10,11,14,.94); backdrop-filter:blur(14px); }
+        .lightbox-close { position:fixed; right:28px; top:24px; z-index:2; padding:8px; background:transparent; color:#fff; cursor:pointer; }
+        .lightbox-content { min-width:100%; min-height:100%; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+        .lightbox-content img { max-width:min(92vw,1600px); max-height:90vh; border-radius:12px; box-shadow:0 28px 80px rgba(0,0,0,.5); pointer-events:auto; }
+        .hidden { display:none !important; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        body.studio-theme-dark { --bg:#141518; --panel:#1f2126; --panel-2:#292b31; --border:#33353c; --border-2:#43454e; --text:#e9eaee; --muted:#9aa0ab; --faint:#666b76; --input:#17181c; --dot:#26282e; --frame:#232529; --shadow:rgba(0,0,0,.5); }
+        @media (max-width:640px){
+            .prompt-composer { width:calc(100vw - 24px); }
+            .size-row,.size-row.three { grid-template-columns:1fr; }
+            .canvas-heading span { display:none; }
+        }
+    </style>
+</head>
+<body class="online-canvas-page">
+    <div class="canvas-shell">
+        <div id="canvasBoard" class="canvas-board">
+            <div id="canvasWorld" class="canvas-world">
+                <div id="masonry" class="canvas-items"></div>
+                <div id="generatorFrame" class="generator-frame">
+                    <div id="generatorDragHandle" class="generator-head">
+                        <span class="generator-title"><i data-lucide="image" style="width:15px;height:15px"></i>Image Generator</span>
+                        <span id="frameSizeText" class="generator-size">1024 × 1024</span>
+                    </div>
+                    <div id="resultBox" class="generator-stage">
+                        <div id="placeholder" class="generator-placeholder"><i data-lucide="image" aria-hidden="true"></i><span>CANVAS READY</span></div>
+                        <div id="loader" class="generator-loader hidden"><div class="spinner"></div><span>GENERATING</span></div>
+                        <img id="outputImg" class="hidden" alt="生成结果" onclick="zoomImage()">
+                        <a id="downloadBtn" class="hidden" href="#" download aria-label="下载生成图片"><i data-lucide="download" style="width:16px;height:16px"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <div id="promptComposer" class="prompt-composer">
+                <div id="promptWrap" class="prompt-wrap">
+                    <textarea id="promptInput" rows="3" placeholder="描述想生成的画面… (Enter 生成)"></textarea>
+                </div>
+                <div class="composer-footer">
+                    <button id="paramsToggle" type="button" class="composer-chip" onclick="toggleComposerPopover('params')">
+                        <span id="paramsSummary">1024×1024</span><i data-lucide="chevron-down" style="width:12px;height:12px"></i>
+                    </button>
+                    <span class="composer-spacer"></span>
+                    <button id="modelToggle" type="button" class="composer-chip" onclick="toggleComposerPopover('model')">
+                        <span class="provider-dot"></span><span id="providerLabel">ComfyUI</span><i data-lucide="chevron-down" style="width:12px;height:12px"></i>
+                    </button>
+                    <button id="genBtn" type="button" class="generate-btn" onclick="submitImage()" aria-label="生成图片"><i data-lucide="zap" style="width:16px;height:16px"></i></button>
+                </div>
+
+                <div id="paramsPopover" class="composer-popover params-popover">
+                    <span id="sizeLabel" class="popover-label">Size</span>
+                    <div id="modelParamRow" class="size-row">
+                        <label id="resolutionField" class="size-field">
+                            <select id="resolutionSelect" class="size-select" onchange="setResolution(this.value)"></select>
+                            <span class="size-pair">
+                                <input id="sizeCustomWidth" class="size-custom" type="number" min="64" step="64" placeholder="宽度" oninput="setCustomSize()">
+                                <input id="sizeCustomHeight" class="size-custom" type="number" min="64" step="64" placeholder="高度" oninput="setCustomSize()">
+                            </span>
+                        </label>
+                        <label id="ratioField" class="size-field">
+                            <select id="ratioSelect" class="size-select" onchange="setRatio(this.value)"></select>
+                            <span class="size-pair">
+                                <input id="ratioCustomWidth" class="size-custom" type="number" min="1" step="1" placeholder="宽" oninput="setCustomRatio()">
+                                <input id="ratioCustomHeight" class="size-custom" type="number" min="1" step="1" placeholder="高" oninput="setCustomRatio()">
+                            </span>
+                        </label>
+                        <label id="thinkingField" class="size-field hidden">
+                            <select id="thinkingSelect" class="size-select" onchange="setThinkingLevel(this.value)">
+                                <option value="MINIMAL" selected>MINIMAL</option>
+                                <option value="LOW">LOW</option>
+                                <option value="MEDIUM">MEDIUM</option>
+                                <option value="HIGH">HIGH</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="modelPopover" class="composer-popover model-popover">
+                    <button id="comfyOpt" type="button" class="model-option active" onclick="setProvider('comfy')"><span class="provider-dot"></span><span class="model-copy"><strong>ComfyUI</strong><small>Z-Image.json</small></span></button>
+                    <button id="gptOpt" type="button" class="model-option" onclick="setProvider('gpt')"><span class="provider-dot"></span><span class="model-copy"><strong>GPT Image</strong><small>gpt-image-2</small></span></button>
+                    <button id="nanoOpt" type="button" class="model-option" onclick="setProvider('nano')"><span class="provider-dot"></span><span class="model-copy"><strong>Nano</strong><small>Nano Banana 2</small></span></button>
+                    <div class="model-popover-separator"></div>
+                    <button id="comfyAuthBtn" type="button" class="auth-chip" onclick="openComfyLogin()"><span class="auth-dot"></span><span id="comfyAuthText">Comfy Login</span></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="canvas-heading"><strong>文生图</strong><span>INFINITE CANVAS</span></div>
+        <div id="loadMoreTrigger">加载历史记录…</div>
+        <div class="canvas-dock">
+            <button type="button" class="dock-btn" onclick="zoomBy(.8)" aria-label="缩小">−</button>
+            <button id="zoomPct" type="button" class="dock-btn" onclick="resetViewport()" aria-label="重置缩放">100%</button>
+            <button type="button" class="dock-btn" onclick="zoomBy(1.25)" aria-label="放大">+</button>
+        </div>
+    </div>
+
+    <div id="comfyLoginModal" class="hidden fixed inset-0 z-50 bg-white/80 backdrop-blur-xl p-6">
+        <div class="w-full max-w-md mx-auto mt-28 bg-white border border-slate-100 rounded-[28px] shadow-2xl overflow-hidden">
+            <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+                <h3 class="text-[12px] font-black uppercase tracking-[0.3em]">Comfy Login</h3>
+                <button type="button" onclick="closeComfyLogin()" class="p-2 text-slate-400 hover:text-slate-900 transition-colors" aria-label="关闭"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input id="comfyEmail" class="modal-field" type="email" autocomplete="username" placeholder="Comfy 邮箱">
+                <input id="comfyPassword" class="modal-field" type="password" autocomplete="current-password" placeholder="Comfy 密码">
+                <div class="flex items-center gap-3 text-[9px] font-black uppercase tracking-[0.2em] text-slate-300"><div class="h-px flex-1 bg-slate-100"></div>OR<div class="h-px flex-1 bg-slate-100"></div></div>
+                <input id="comfyApiKey" class="modal-field" type="password" autocomplete="off" placeholder="Comfy 登录密钥">
+                <p id="comfyLoginError" class="hidden text-xs font-semibold text-red-500"></p>
+                <button id="comfyLoginSubmit" type="button" onclick="submitComfyLogin()" class="w-full h-12 rounded-2xl bg-slate-950 text-white text-[10px] font-black uppercase tracking-[0.3em] hover:bg-black transition-colors">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="lightbox" onclick="handleOutsideClick(event)" class="lightbox hidden">
+        <button type="button" onclick="event.stopPropagation(); closeLightbox()" class="lightbox-close" aria-label="关闭预览"><i data-lucide="x" style="width:28px;height:28px"></i></button>
+        <div class="lightbox-content">
+            <img id="lightboxImg" alt="图片预览" onclick="event.stopPropagation()">
+        </div>
+    </div>
+
+    <script>
+        function refreshIcons(){
+            if(window.lucide?.createIcons) window.lucide.createIcons();
+        }
+        refreshIcons();
+        const storage = (() => {
+            try { if (window.localStorage) return window.localStorage; } catch(e) {}
+            const fallback = {};
+            return {getItem:k=>fallback[k]||null,setItem:(k,v)=>{fallback[k]=String(v)},removeItem:k=>{delete fallback[k]}};
+        })();
+        const INPUT_STATE_KEY = 'online_input_state';
+        const PENDING_RESULT_KEY = 'pending_result_online';
+        const CLIENT_ID = storage.getItem('client_id') || ((typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()));
+        storage.setItem('client_id', CLIENT_ID);
+        let provider = 'comfy';
+        let ratio = '1024x1024';
+        let resolution = '';
+        let thinkingLevel = 'MINIMAL';
+        let customRatioWidth = '';
+        let customRatioHeight = '';
+        let customWidth = '';
+        let customHeight = '';
+        let comfyAuth = {authenticated:false};
+        let models = {comfy:'Z-Image.json', gpt:'gpt-image-2', nano:'Nano Banana 2 (Gemini 3.1 Flash Image)'};
+        let allHistory = [], currentIndex = 0, currentResult = null, currentLightboxData = null, isLoading = false;
+        let canvasView = {x:0, y:0, scale:.8};
+        let generatorPosition = {x:0, y:40};
+        let generatorStageHeight = 440;
+        let canvasDrag = null;
+        let selectedHistoryId = null;
+        const historyPositions = new Map();
+        const PAGE_SIZE = 24;
+        const GPT_SIZES = [
+            ['auto', 'auto'],
+            ['1024x1024', '1024×1024'],
+            ['1024x1536', '1024×1536'],
+            ['1536x1024', '1536×1024'],
+            ['2048x2048', '2048×2048'],
+            ['2048x1152', '2048×1152'],
+            ['1152x2048', '1152×2048'],
+            ['3840x2160', '3840×2160'],
+            ['2160x3840', '2160×3840'],
+            ['custom', '自定义尺寸']
+        ];
+        const GPT_QUALITY = [['low','low'], ['medium','medium'], ['high','high']];
+        const COMFY_SIZES = [
+            ['1024x1024', '1024×1024'],
+            ['768x1024', '768×1024'],
+            ['1024x768', '1024×768'],
+            ['1536x1536', '1536×1536'],
+            ['custom', '自定义尺寸']
+        ];
+        const NANO_RESOLUTIONS = [['1K','1K'], ['2K','2K'], ['4K','4K']];
+        const NANO_RATIOS = [
+            ['auto','auto'], ['1:1','1:1'], ['2:3','2:3'], ['3:2','3:2'], ['3:4','3:4'],
+            ['4:3','4:3'], ['4:5','4:5'], ['5:4','5:4'], ['9:16','9:16'], ['16:9','16:9'],
+            ['21:9','21:9'], ['1:4','1:4'], ['4:1','4:1'], ['8:1','8:1'], ['1:8','1:8']
+        ];
+
+        function historyKey(data){
+            return String(data?.timestamp || data?.images?.[0] || '');
+        }
+
+        function frameAspectRatio(){
+            if(provider === 'nano'){
+                const match = String(ratio || '').match(/^(\d+):(\d+)$/);
+                return match ? Number(match[1]) / Number(match[2]) : 1;
+            }
+            const dims = currentDimensions();
+            return Math.max(.125, Math.min(8, dims.width / dims.height));
+        }
+
+        function updateGeneratorFrame(){
+            const stage = document.getElementById('resultBox');
+            if(!stage) return;
+            generatorStageHeight = Math.max(220, Math.min(700, Math.round(440 / frameAspectRatio())));
+            stage.style.height = `${generatorStageHeight}px`;
+            const dims = currentDimensions();
+            document.getElementById('frameSizeText').textContent = provider === 'nano'
+                ? (ratio || 'auto')
+                : `${dims.width} × ${dims.height}`;
+            updateCanvasLayout();
+        }
+
+        function updateCanvasLayout(){
+            const board = document.getElementById('canvasBoard');
+            const world = document.getElementById('canvasWorld');
+            const frame = document.getElementById('generatorFrame');
+            const composer = document.getElementById('promptComposer');
+            if(!board || !world || !frame || !composer) return;
+            world.style.transform = `translate(${canvasView.x}px, ${canvasView.y}px) scale(${canvasView.scale})`;
+            frame.style.transform = `translate(${generatorPosition.x}px, ${generatorPosition.y}px)`;
+            board.style.backgroundSize = `${26 * canvasView.scale}px ${26 * canvasView.scale}px`;
+            board.style.backgroundPosition = `${canvasView.x}px ${canvasView.y}px`;
+            document.getElementById('zoomPct').textContent = `${Math.round(canvasView.scale * 100)}%`;
+
+            const frameScreenX = canvasView.x + generatorPosition.x * canvasView.scale;
+            const frameScreenBottom = canvasView.y + (generatorPosition.y + 27 + generatorStageHeight) * canvasView.scale;
+            const composerWidth = composer.offsetWidth || 440;
+            composer.style.left = `${frameScreenX + (440 * canvasView.scale - composerWidth) / 2}px`;
+            composer.style.top = `${frameScreenBottom + 14}px`;
+        }
+
+        function resetViewport(){
+            const board = document.getElementById('canvasBoard');
+            if(!board) return;
+            const rect = board.getBoundingClientRect();
+            canvasView = {
+                scale:.8,
+                x:rect.width / 2 - (generatorPosition.x + 220) * .8,
+                y:80 - generatorPosition.y * .8
+            };
+            updateCanvasLayout();
+        }
+
+        function zoomAt(factor, clientX, clientY){
+            const board = document.getElementById('canvasBoard');
+            if(!board) return;
+            const rect = board.getBoundingClientRect();
+            const cx = (clientX ?? rect.left + rect.width / 2) - rect.left;
+            const cy = (clientY ?? rect.top + rect.height / 2) - rect.top;
+            const next = Math.max(.12, Math.min(3, canvasView.scale * factor));
+            canvasView.x = cx - (cx - canvasView.x) * next / canvasView.scale;
+            canvasView.y = cy - (cy - canvasView.y) * next / canvasView.scale;
+            canvasView.scale = next;
+            updateCanvasLayout();
+        }
+
+        function zoomBy(factor){ zoomAt(factor); }
+
+        function closeComposerPopovers(){
+            document.getElementById('paramsPopover')?.classList.remove('open');
+            document.getElementById('modelPopover')?.classList.remove('open');
+            document.getElementById('paramsToggle')?.classList.remove('active');
+            document.getElementById('modelToggle')?.classList.remove('active');
+        }
+
+        function toggleComposerPopover(name){
+            const target = document.getElementById(name === 'params' ? 'paramsPopover' : 'modelPopover');
+            const toggle = document.getElementById(name === 'params' ? 'paramsToggle' : 'modelToggle');
+            const wasOpen = target.classList.contains('open');
+            closeComposerPopovers();
+            if(!wasOpen){ target.classList.add('open'); toggle.classList.add('active'); }
+        }
+
+        function initCanvasInteractions(){
+            const board = document.getElementById('canvasBoard');
+            const composer = document.getElementById('promptComposer');
+            const frame = document.getElementById('generatorFrame');
+            composer.addEventListener('pointerdown', event => event.stopPropagation());
+            composer.addEventListener('wheel', event => event.stopPropagation(), {passive:true});
+            frame.addEventListener('pointerdown', event => {
+                if(event.button !== 0 || event.target.closest('a,button')) return;
+                event.preventDefault();
+                event.stopPropagation();
+                canvasDrag = {type:'frame', sx:event.clientX, sy:event.clientY, x:generatorPosition.x, y:generatorPosition.y};
+            });
+            board.addEventListener('pointerdown', event => {
+                if(event.button !== 0 || event.target.closest('.prompt-composer,.canvas-dock,.canvas-image-card,.generator-frame')) return;
+                closeComposerPopovers();
+                selectedHistoryId = null;
+                document.querySelectorAll('.canvas-image-card.selected').forEach(card => card.classList.remove('selected'));
+                canvasDrag = {type:'pan', sx:event.clientX, sy:event.clientY, x:canvasView.x, y:canvasView.y};
+                board.classList.add('panning');
+            });
+            board.addEventListener('wheel', event => {
+                event.preventDefault();
+                if(event.ctrlKey || event.metaKey){
+                    zoomAt(Math.exp(-event.deltaY * .0022), event.clientX, event.clientY);
+                } else {
+                    canvasView.x -= event.deltaX;
+                    canvasView.y -= event.deltaY;
+                    updateCanvasLayout();
+                }
+            }, {passive:false});
+            window.addEventListener('pointermove', event => {
+                if(!canvasDrag) return;
+                const dx = event.clientX - canvasDrag.sx;
+                const dy = event.clientY - canvasDrag.sy;
+                if(canvasDrag.type === 'pan'){
+                    canvasView.x = canvasDrag.x + dx;
+                    canvasView.y = canvasDrag.y + dy;
+                } else if(canvasDrag.type === 'frame'){
+                    generatorPosition.x = canvasDrag.x + dx / canvasView.scale;
+                    generatorPosition.y = canvasDrag.y + dy / canvasView.scale;
+                } else if(canvasDrag.type === 'image'){
+                    const position = historyPositions.get(canvasDrag.key);
+                    if(position){
+                        position.x = canvasDrag.x + dx / canvasView.scale;
+                        position.y = canvasDrag.y + dy / canvasView.scale;
+                        canvasDrag.card.style.transform = `translate(${position.x}px, ${position.y}px)`;
+                    }
+                }
+                updateCanvasLayout();
+            });
+            window.addEventListener('pointerup', () => {
+                canvasDrag = null;
+                board.classList.remove('panning');
+            });
+            document.addEventListener('pointerdown', event => {
+                if(!event.target.closest('.prompt-composer')) closeComposerPopovers();
+            });
+        }
+
+        async function initModels(){
+            try {
+                const cfg = await fetch('/api/config').then(r=>r.json());
+                const imageModels = cfg.image_models || [];
+                models.gpt = imageModels.find(m => !m.toLowerCase().includes('nano')) || cfg.image_model || 'gpt-image-2';
+                comfyAuth.authenticated = !!cfg.has_comfy_org_auth;
+                updateComfyAuthButton();
+            } catch(e) {}
+        }
+
+        function updateComfyAuthButton(){
+            const btn = document.getElementById('comfyAuthBtn');
+            const text = document.getElementById('comfyAuthText');
+            btn.classList.toggle('ready', !!comfyAuth.authenticated);
+            text.textContent = comfyAuth.authenticated ? 'Comfy Ready' : 'Comfy Login';
+        }
+
+        async function refreshComfyAuthStatus(){
+            try {
+                comfyAuth = await fetch('/api/comfy-auth/status').then(r=>r.json());
+            } catch(e) {
+                comfyAuth = {authenticated:false};
+            }
+            updateComfyAuthButton();
+            return comfyAuth.authenticated;
+        }
+
+        function openComfyLogin(){
+            document.getElementById('comfyLoginModal').classList.remove('hidden');
+            document.getElementById('comfyLoginError').classList.add('hidden');
+            document.getElementById('comfyEmail').focus();
+            refreshIcons();
+        }
+
+        function closeComfyLogin(){
+            document.getElementById('comfyLoginModal').classList.add('hidden');
+        }
+
+        async function submitComfyLogin(){
+            const submit = document.getElementById('comfyLoginSubmit');
+            const error = document.getElementById('comfyLoginError');
+            const email = document.getElementById('comfyEmail').value.trim();
+            const password = document.getElementById('comfyPassword').value;
+            const api_key = document.getElementById('comfyApiKey').value.trim();
+            if(!api_key && (!email || !password)){
+                error.textContent = '请输入邮箱密码，或填写 Comfy 登录密钥';
+                error.classList.remove('hidden');
+                return;
+            }
+            submit.disabled = true;
+            submit.textContent = 'Logging In';
+            error.classList.add('hidden');
+            try {
+                await fetch('/api/comfy-auth/login', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({email, password, api_key})
+                }).then(async r => { if(!r.ok) throw new Error((await r.json()).detail || '登录失败'); return r.json(); });
+                document.getElementById('comfyPassword').value = '';
+                document.getElementById('comfyApiKey').value = '';
+                await refreshComfyAuthStatus();
+                closeComfyLogin();
+            } catch(e) {
+                error.textContent = e.message || '登录失败';
+                error.classList.remove('hidden');
+            } finally {
+                submit.disabled = false;
+                submit.textContent = 'Login';
+            }
+        }
+
+        function setProvider(next){
+            provider = next;
+            document.getElementById('comfyOpt').classList.toggle('active', next === 'comfy');
+            document.getElementById('gptOpt').classList.toggle('active', next === 'gpt');
+            document.getElementById('nanoOpt').classList.toggle('active', next === 'nano');
+            if(next === 'gpt'){
+                resolution = ['low','medium','high'].includes(resolution) ? resolution : 'low';
+                ratio = GPT_SIZES.some(([value]) => value === ratio) ? ratio : '1024x1024';
+            } else if(next === 'nano') {
+                resolution = ['1K','2K','4K'].includes(String(resolution).toUpperCase()) ? String(resolution).toUpperCase() : '1K';
+                ratio = NANO_RATIOS.some(([value]) => value === ratio) ? ratio : 'auto';
+            } else {
+                resolution = '';
+                ratio = COMFY_SIZES.some(([value]) => value === ratio) ? ratio : '1024x1024';
+            }
+            customWidth = '';
+            customHeight = '';
+            customRatioWidth = '';
+            customRatioHeight = '';
+            updateSizeUI();
+            closeComposerPopovers();
+            saveInputState();
+        }
+
+        function parseSizeValue(value){
+            const match = String(value || '').trim().match(/^(\d+)\s*[xX*×]\s*(\d+)$/);
+            return match ? {width:match[1], height:match[2]} : null;
+        }
+        function customRatioValue(){
+            const w = Number(customRatioWidth);
+            const h = Number(customRatioHeight);
+            return w > 0 && h > 0 ? w / h : null;
+        }
+        function customSizeValue(){
+            const w = Number(customWidth);
+            const h = Number(customHeight);
+            return w > 0 && h > 0 ? `${Math.round(w)}x${Math.round(h)}` : '';
+        }
+
+        function setRatio(next){
+            ratio = next;
+            if(next !== 'custom') {
+                customRatioWidth = '';
+                customRatioHeight = '';
+            }
+            updateSizeUI();
+            saveInputState();
+        }
+
+        function setCustomRatio(){
+            customRatioWidth = document.getElementById('ratioCustomWidth').value;
+            customRatioHeight = document.getElementById('ratioCustomHeight').value;
+            ratio = customRatioWidth && customRatioHeight ? `${customRatioWidth}:${customRatioHeight}` : 'auto';
+            updateSizeUI();
+            saveInputState();
+        }
+
+        function setCustomSize(){
+            customWidth = document.getElementById('sizeCustomWidth').value;
+            customHeight = document.getElementById('sizeCustomHeight').value;
+            ratio = 'custom';
+            updateSizeUI();
+            saveInputState();
+        }
+
+        function setResolution(next){
+            if(provider === 'comfy'){
+                ratio = next;
+            } else {
+                resolution = next;
+            }
+            if(provider === 'gpt' || next !== 'custom'){
+                customWidth = '';
+                customHeight = '';
+            }
+            updateSizeUI();
+            saveInputState();
+        }
+
+        function setThinkingLevel(next){
+            thinkingLevel = next;
+            updateSizeUI();
+            saveInputState();
+        }
+
+        function setOptions(select, options, selected){
+            const current = select.value;
+            select.innerHTML = options.map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
+            select.value = options.some(([value]) => value === selected) ? selected : (options.some(([value]) => value === current) ? current : options[0][0]);
+        }
+
+        function updateSizeUI(){
+            const ratioSelect = document.getElementById('ratioSelect');
+            const ratioField = document.getElementById('ratioField');
+            const ratioCustomWidthInput = document.getElementById('ratioCustomWidth');
+            const ratioCustomHeightInput = document.getElementById('ratioCustomHeight');
+            const resolutionSelect = document.getElementById('resolutionSelect');
+            const resolutionField = document.getElementById('resolutionField');
+            const sizeCustomWidthInput = document.getElementById('sizeCustomWidth');
+            const sizeCustomHeightInput = document.getElementById('sizeCustomHeight');
+            const thinkingField = document.getElementById('thinkingField');
+            const paramRow = document.getElementById('modelParamRow');
+            document.getElementById('sizeLabel').textContent = provider === 'gpt' ? 'Quality / Size' : (provider === 'comfy' ? 'Size' : 'Resolution / Ratio');
+            if(provider === 'gpt'){
+                setOptions(resolutionSelect, GPT_QUALITY, resolution);
+                setOptions(ratioSelect, GPT_SIZES, ratio);
+                paramRow.classList.remove('three', 'comfy-only');
+                thinkingField.classList.add('hidden');
+                ratioField.classList.remove('hidden');
+                ratioField.classList.toggle('custom', ratio === 'custom');
+                resolutionField.classList.remove('custom');
+            } else if(provider === 'comfy') {
+                setOptions(resolutionSelect, COMFY_SIZES, ratio);
+                paramRow.classList.remove('three');
+                paramRow.classList.add('comfy-only');
+                thinkingField.classList.add('hidden');
+                ratioField.classList.add('hidden');
+                ratioField.classList.remove('custom');
+                resolutionField.classList.toggle('custom', ratio === 'custom');
+            } else {
+                setOptions(resolutionSelect, NANO_RESOLUTIONS, resolution);
+                setOptions(ratioSelect, NANO_RATIOS, ratio);
+                paramRow.classList.add('three');
+                paramRow.classList.remove('comfy-only');
+                thinkingField.classList.remove('hidden');
+                ratioField.classList.remove('hidden');
+                ratioField.classList.remove('custom');
+                resolutionField.classList.remove('custom');
+            }
+            ratioSelect.value = ratio;
+            ratioSelect.disabled = false;
+            ratioCustomWidthInput.value = customRatioWidth;
+            ratioCustomHeightInput.value = customRatioHeight;
+            resolutionSelect.value = provider === 'comfy' ? ratio : resolution;
+            sizeCustomWidthInput.value = customWidth;
+            sizeCustomHeightInput.value = customHeight;
+            document.getElementById('thinkingSelect').value = thinkingLevel;
+            const providerNames = {comfy:'ComfyUI', gpt:'GPT Image', nano:'Nano'};
+            document.getElementById('providerLabel').textContent = providerNames[provider] || provider;
+            const summary = provider === 'nano'
+                ? `${resolution || '1K'} · ${ratio || 'auto'} · ${thinkingLevel}`
+                : (provider === 'gpt'
+                    ? `${resolution || 'low'} · ${(ratio || 'auto').replace('x','×')}`
+                    : (currentSize() || 'auto').replace('x','×'));
+            document.getElementById('paramsSummary').textContent = summary;
+            updateGeneratorFrame();
+        }
+
+        function currentSize(){
+            if(provider === 'nano') return '';
+            if(ratio === 'custom') return customSizeValue() || 'auto';
+            return ratio || 'auto';
+        }
+
+        function currentDimensions(){
+            const parsed = parseSizeValue(currentSize()) || {width:'1024', height:'1024'};
+            return {
+                width: Number(parsed.width) || 1024,
+                height: Number(parsed.height) || 1024
+            };
+        }
+
+        function saveInputState(extra={}){
+            try {
+                storage.setItem(INPUT_STATE_KEY, JSON.stringify({
+                    prompt:document.getElementById('promptInput')?.value || '',
+                    provider, ratio, resolution, thinkingLevel,
+                    customRatioWidth, customRatioHeight, customWidth, customHeight,
+                    saved_at:Date.now(),
+                    ...extra
+                }));
+            } catch(e) {}
+        }
+
+        function restoreInputState(){
+            let state = null;
+            try { state = JSON.parse(storage.getItem(INPUT_STATE_KEY) || 'null'); } catch(e) {}
+            if(!state) return;
+            if(Date.now() - Number(state.saved_at || 0) > 24 * 60 * 60 * 1000){
+                storage.removeItem(INPUT_STATE_KEY);
+                return;
+            }
+            provider = state.provider || provider;
+            ratio = state.ratio || ratio;
+            resolution = state.resolution ?? resolution;
+            thinkingLevel = state.thinkingLevel || thinkingLevel;
+            customRatioWidth = state.customRatioWidth || '';
+            customRatioHeight = state.customRatioHeight || '';
+            customWidth = state.customWidth || '';
+            customHeight = state.customHeight || '';
+            document.getElementById('promptInput').value = state.prompt || '';
+            setProvider(provider);
+            updateSizeUI();
+        }
+
+        function showPendingLoading(){
+            const btn = document.getElementById('genBtn'), loader = document.getElementById('loader'), placeholder = document.getElementById('placeholder'), out = document.getElementById('outputImg'), dl = document.getElementById('downloadBtn');
+            btn.disabled = true;
+            placeholder.classList.add('hidden');
+            out.classList.add('hidden');
+            dl.classList.add('hidden');
+            loader.classList.remove('hidden');
+        }
+
+        function markPendingResult(){
+            saveInputState({running:true});
+            storage.setItem(PENDING_RESULT_KEY, JSON.stringify({
+                client_id:CLIENT_ID,
+                type:'online',
+                started_at:Date.now()
+            }));
+        }
+
+        function clearPendingResult(){
+            storage.removeItem(PENDING_RESULT_KEY);
+            saveInputState({running:false});
+        }
+
+        function restorePendingResult(history){
+            let pending = null;
+            try { pending = JSON.parse(storage.getItem(PENDING_RESULT_KEY) || 'null'); } catch(e) {}
+            if(!pending) return;
+            showPendingLoading();
+            const match = (history || []).find(item => {
+                const itemTs = Number(item.timestamp || 0) * 1000;
+                return item?.images?.[0] && item.type === 'online' && itemTs >= pending.started_at - 3000;
+            });
+            if(match){
+                clearPendingResult();
+                showResult(match);
+                renderImageCard(match, true);
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('genBtn').disabled = false;
+                return;
+            }
+            if(Date.now() - pending.started_at > 30 * 60 * 1000){
+                clearPendingResult();
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('placeholder').classList.remove('hidden');
+                document.getElementById('genBtn').disabled = false;
+                return;
+            }
+            setTimeout(loadHistory, 2000);
+        }
+
+        function showResult(result){
+            if(!result?.images?.[0]) return;
+            currentResult = result;
+            const out = document.getElementById('outputImg'), dl = document.getElementById('downloadBtn');
+            document.getElementById('placeholder').classList.add('hidden');
+            document.getElementById('loader').classList.add('hidden');
+            out.src = result.images[0];
+            out.classList.remove('hidden');
+            dl.href = result.images[0];
+            dl.classList.remove('hidden');
+        }
+
+        function syncResultBoxHeight(force=false){
+            updateGeneratorFrame();
+        }
+
+        function initPromptResize(){
+            const textarea = document.getElementById('promptInput');
+            const resize = () => {
+                textarea.style.height = 'auto';
+                textarea.style.height = `${Math.max(68, Math.min(148, textarea.scrollHeight))}px`;
+                updateCanvasLayout();
+            };
+            textarea.addEventListener('input', resize);
+            textarea.addEventListener('keydown', event => {
+                if(event.key === 'Enter' && !event.shiftKey){
+                    event.preventDefault();
+                    submitImage();
+                }
+            });
+            resize();
+        }
+
+        async function submitImage(){
+            const prompt = document.getElementById('promptInput').value.trim();
+            if(!prompt){ alert('请输入提示词'); return; }
+            if(provider === 'gpt' && !await refreshComfyAuthStatus()){
+                openComfyLogin();
+                alert('请先登录 ComfyUI');
+                return;
+            }
+            const btn = document.getElementById('genBtn'), loader = document.getElementById('loader'), placeholder = document.getElementById('placeholder'), out = document.getElementById('outputImg'), dl = document.getElementById('downloadBtn');
+            btn.disabled = true; placeholder.classList.add('hidden'); out.classList.add('hidden'); dl.classList.add('hidden'); loader.classList.remove('hidden');
+            try {
+                let result;
+                markPendingResult();
+                if(provider === 'comfy'){
+                    const dims = currentDimensions();
+                    result = await fetch('/api/generate', {
+                        method:'POST',
+                        headers:{'Content-Type':'application/json'},
+                        body:JSON.stringify({
+                            prompt,
+                            width:dims.width,
+                            height:dims.height,
+                            workflow_json:'Z-Image.json',
+                            type:'online',
+                            model:models.comfy,
+                            params:{
+                                provider:'comfy',
+                                workflow_json:'Z-Image.json',
+                                width:dims.width,
+                                height:dims.height
+                            }
+                        })
+                    }).then(async r => { if(!r.ok) throw new Error((await r.json()).detail || '生成失败'); return r.json(); });
+                } else {
+                    result = await fetch('/api/online-image', {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body:JSON.stringify({
+                            prompt,
+                            provider,
+                            model:models[provider],
+                            quality:provider === 'gpt' ? resolution : 'auto',
+                            size:currentSize(),
+                            aspect_ratio:provider === 'nano' ? ratio : 'auto',
+                            resolution:provider === 'nano' ? resolution : '',
+                            thinking_level:thinkingLevel
+                        })
+                    }).then(async r => { if(!r.ok) throw new Error((await r.json()).detail || '生成失败'); return r.json(); });
+                }
+                if(!result.images?.[0]) throw new Error(result.error || '生成失败：没有返回图片');
+                clearPendingResult();
+                showResult(result);
+                renderImageCard(result, true);
+            } catch(err) {
+                clearPendingResult();
+                alert(err.message || 'Generation failed'); placeholder.classList.remove('hidden');
+            } finally {
+                loader.classList.add('hidden'); btn.disabled = false;
+            }
+        }
+
+        function historyDomId(data){
+            return `h-${historyKey(data).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+        }
+
+        function historyPosition(data, index=0, isNew=false){
+            const key = historyKey(data);
+            if(historyPositions.has(key)) return historyPositions.get(key);
+            const seed = Number(data?.timestamp || index * 97) || index * 97;
+            const position = isNew
+                ? {x:generatorPosition.x, y:generatorPosition.y + 27, w:440}
+                : {
+                    x:-1320 + (index % 4) * 350 + (seed % 37),
+                    y:-360 + Math.floor(index / 4) * 390 + (seed % 53),
+                    w:286 + (seed % 42)
+                };
+            historyPositions.set(key, position);
+            return position;
+        }
+
+        function selectHistoryCard(card, data){
+            selectedHistoryId = historyKey(data);
+            currentLightboxData = data;
+            document.querySelectorAll('.canvas-image-card.selected').forEach(item => item.classList.remove('selected'));
+            card.classList.add('selected');
+        }
+
+        function resetGeneratorStage(){
+            document.getElementById('outputImg').classList.add('hidden');
+            document.getElementById('downloadBtn').classList.add('hidden');
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('placeholder').classList.remove('hidden');
+        }
+
+        function renderImageCard(data, isNew=false, index=0){
+            if(!data.images?.[0] || document.getElementById(historyDomId(data))) return;
+            const masonry = document.getElementById('masonry');
+            const card = document.createElement('div');
+            const key = historyKey(data);
+            const position = historyPosition(data, index, isNew);
+            card.id = historyDomId(data);
+            card.className = 'canvas-image-card';
+            card.style.width = `${position.w}px`;
+            card.style.transform = `translate(${position.x}px, ${position.y}px)`;
+            card.innerHTML = `
+                <div class="canvas-image-actions">
+                    <button type="button" class="use-params"><i data-lucide="rotate-ccw" style="width:12px;height:12px"></i>用相同参数</button>
+                    <a href="${data.images[0]}" download><i data-lucide="download" style="width:12px;height:12px"></i>下载</a>
+                    <span class="divider"></span>
+                    <button type="button" class="delete" title="删除"><i data-lucide="trash-2" style="width:13px;height:13px"></i></button>
+                </div>
+                <img src="${data.images[0]}" alt="历史生成图片" loading="lazy">
+            `;
+            card.addEventListener('click', event => {
+                if(event.target.closest('.canvas-image-actions')) return;
+                event.stopPropagation();
+                selectHistoryCard(card, data);
+            });
+            card.addEventListener('dblclick', event => {
+                if(event.target.closest('.canvas-image-actions')) return;
+                event.stopPropagation();
+                openLightbox(data);
+            });
+            card.addEventListener('pointerdown', event => {
+                if(event.button !== 0 || event.target.closest('.canvas-image-actions')) return;
+                event.preventDefault();
+                event.stopPropagation();
+                selectHistoryCard(card, data);
+                canvasDrag = {type:'image', key, card, sx:event.clientX, sy:event.clientY, x:position.x, y:position.y};
+            });
+            card.querySelector('.use-params').onclick = event => {
+                event.stopPropagation();
+                currentLightboxData = data;
+                applySameStyle();
+            };
+            card.querySelector('a').onclick = event => event.stopPropagation();
+            card.querySelector('.delete').onclick = event => deleteHistoryItem(data.timestamp, event);
+            isNew ? masonry.prepend(card) : masonry.appendChild(card);
+            if(isNew){
+                selectHistoryCard(card, data);
+                generatorPosition.x += 500;
+                resetGeneratorStage();
+                updateCanvasLayout();
+            }
+            refreshIcons();
+        }
+        async function loadHistory(){
+            if(isLoading) return; isLoading = true;
+            const loader = document.getElementById('loadMoreTrigger');
+            loader.innerText = 'Loading Archive...';
+            allHistory = await fetch('/api/history?type=online').then(r=>r.json());
+            document.getElementById('masonry').innerHTML='';
+            allHistory.forEach((item, index) => renderImageCard(item, false, index));
+            restorePendingResult(allHistory);
+            loader.innerText = 'End of Archive';
+            isLoading = false;
+        }
+        function openLightbox(data){
+            currentLightboxData = data;
+            document.getElementById('lightboxImg').src = data.images[0];
+            document.getElementById('lightbox').classList.replace('hidden','block');
+            document.body.style.overflow='hidden';
+        }
+        function closeLightbox(){ document.getElementById('lightbox').classList.replace('block','hidden'); document.body.style.overflow='hidden'; }
+        function handleOutsideClick(e){
+            if(e.target.closest('#lightboxImg, button')) return;
+            closeLightbox();
+        }
+        function zoomImage(){ if(currentResult) openLightbox(currentResult); }
+        function applySameStyle(){
+            if(!currentLightboxData) return;
+            document.getElementById('promptInput').value = currentLightboxData.prompt || '';
+            const params = currentLightboxData.params || {};
+            const gptNode = params['268'] || {};
+            const nanoNode = params['37'] || {};
+            const savedProvider = params.provider || currentLightboxData.provider;
+            setProvider(savedProvider === 'comfy' || params.workflow_json === 'Z-Image.json' ? 'comfy' : (savedProvider === 'nano' || !!nanoNode.prompt ? 'nano' : 'gpt'));
+            if(provider === 'nano'){
+                resolution = params.resolution || nanoNode['model.resolution'] || '1K';
+                ratio = params.aspect_ratio || nanoNode['model.aspect_ratio'] || 'auto';
+                thinkingLevel = params.thinking_level || nanoNode['model.thinking_level'] || 'MINIMAL';
+                document.getElementById('thinkingSelect').value = thinkingLevel;
+            } else if(provider === 'comfy') {
+                const savedSize = params.width && params.height ? `${params.width}x${params.height}` : '1024x1024';
+                ratio = COMFY_SIZES.some(([value]) => value === savedSize) ? savedSize : 'custom';
+                if(ratio === 'custom'){
+                    customWidth = params.width || '1024';
+                    customHeight = params.height || '1024';
+                }
+            } else {
+                resolution = params.quality || gptNode.quality || 'low';
+                ratio = params.size || gptNode.size || '1024x1024';
+                const parsed = parseSizeValue(ratio);
+                if(!GPT_SIZES.some(([value]) => value === ratio) && parsed){
+                    ratio = 'custom';
+                    customWidth = parsed.width;
+                    customHeight = parsed.height;
+                }
+            }
+            updateSizeUI();
+            closeLightbox();
+            closeComposerPopovers();
+            document.getElementById('promptInput').focus();
+            updateCanvasLayout();
+            saveInputState();
+        }
+        async function deleteHistoryItem(ts, ev){
+            ev.stopPropagation();
+            if(!confirm('删除这张图片？')) return;
+            try {
+                const res = await fetch('/api/history/delete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({timestamp:ts})}).then(r=>r.json());
+                if(res.success){
+                    document.getElementById(historyDomId({timestamp:ts}))?.remove();
+                    historyPositions.delete(String(ts));
+                    if(selectedHistoryId === String(ts)) selectedHistoryId = null;
+                }
+                else alert(res.message || '删除失败');
+            } catch(e) {
+                alert('删除失败');
+            }
+        }
+        window.onload = async () => {
+            initCanvasInteractions();
+            updateSizeUI();
+            restoreInputState();
+            document.getElementById('promptInput').addEventListener('input', () => saveInputState());
+            initPromptResize();
+            resetViewport();
+            await refreshComfyAuthStatus();
+            await initModels();
+            await loadHistory();
+            updateCanvasLayout();
+        };
+        window.addEventListener('resize', () => updateCanvasLayout());
+        window.addEventListener('keydown', e => {
+            if(e.key === 'Escape' && !document.getElementById('lightbox').classList.contains('hidden')) closeLightbox();
+            if(e.key === 'Escape') closeComposerPopovers();
+        });
+    </script>
+</body>
+</html>

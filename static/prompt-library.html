@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/logo.png" type="image/png">
+    <title>Prompt Library</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/static/theme.js?v=20260509"></script>
+    <style>
+        :root{--page:#f8fafc;--panel:#fff;--panel-2:#fbfdff;--line:#e8edf3;--line-2:#dbe3ed;--text:#111827;--muted:#64748b;--faint:#94a3b8;--strong:#111827;--strong-text:#fff;--soft:#f1f5f9;--shadow:rgba(15,23,42,.08)}
+        *{box-sizing:border-box}
+        body{margin:0;height:100vh;overflow:hidden;background:var(--page);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+        .page{height:100vh;padding:28px;display:flex;flex-direction:column;gap:18px}
+        .head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px}
+        .title{font-size:34px;font-weight:900;letter-spacing:-.04em;line-height:1}
+        .sub{margin-top:6px;color:var(--faint);font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+        .actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+        .btn{height:38px;padding:0 14px;border-radius:999px;background:var(--strong);color:var(--strong-text);font-size:12px;font-weight:850;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--strong);white-space:nowrap}
+        .btn.secondary{background:var(--panel);color:var(--muted);border-color:var(--line-2)}
+        .btn.danger{background:#dc2626;color:#fff;border-color:#dc2626}
+        .btn:disabled{opacity:.45;pointer-events:none}
+        .status{min-width:180px;text-align:right;color:var(--faint);font-size:12px;font-weight:750}
+        .layout{flex:1;min-height:0;display:grid;grid-template-columns:270px minmax(320px,430px) minmax(0,1fr);gap:16px}
+        .panel{min-height:0;background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:0 1px 0 rgba(15,23,42,.02);overflow:hidden}
+        .side{padding:14px;overflow:auto}
+        .side-title{margin:8px 10px 10px;color:var(--faint);font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+        .tree-row{width:100%;min-height:36px;padding:0 10px;border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:13px;font-weight:760;text-align:left}
+        .tree-row:hover{background:var(--soft);color:var(--text)}
+        .tree-row.active{background:var(--strong);color:var(--strong-text)}
+        .tree-row.parent{margin-top:8px;font-weight:900;color:var(--text)}
+        .tree-row.parent.active{color:var(--strong-text)}
+        .tree-row.child{padding-left:24px}
+        .tree-row.child.active{color:var(--strong-text)}
+        .tree-count{font-size:10px;font-weight:900;opacity:.62}
+        .list-head{height:66px;padding:12px 14px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+        .search{height:38px;border:1px solid var(--line-2);border-radius:999px;background:var(--panel-2);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--faint)}
+        .search input{width:100%;height:100%;border:0;outline:0;background:transparent;color:var(--text);font-size:13px;font-weight:700}
+        .list{height:calc(100% - 66px);overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+        .prompt-card{width:100%;padding:12px;border:1px solid var(--line);border-radius:16px;background:var(--panel-2);text-align:left;transition:all .15s ease}
+        .prompt-card:hover{border-color:var(--line-2);box-shadow:0 10px 24px var(--shadow)}
+        .prompt-card.active{border-color:var(--strong);background:var(--panel);box-shadow:0 12px 28px var(--shadow)}
+        .prompt-card-title{font-size:13px;line-height:1.35;font-weight:900;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+        .prompt-card-desc{margin-top:6px;font-size:12px;line-height:1.45;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+        .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+        .chip{height:24px;padding:0 9px;border-radius:999px;background:var(--soft);color:var(--muted);font-size:11px;font-weight:800;display:inline-flex;align-items:center}
+        .detail{height:100%;overflow:auto;padding:20px}
+        .detail-grid{display:grid;grid-template-columns:minmax(260px,42%) minmax(0,1fr);gap:20px;align-items:start}
+        .image-frame{position:sticky;top:0;overflow:hidden;border-radius:16px;background:#111827;aspect-ratio:4/5;border:1px solid var(--line)}
+        .image-frame img{width:100%;height:100%;object-fit:cover;display:block}
+        .image-empty{height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px;font-weight:900;letter-spacing:.14em}
+        .detail-title{font-size:24px;line-height:1.22;font-weight:950;letter-spacing:-.03em}
+        .detail-desc{margin-top:10px;color:var(--muted);font-size:14px;line-height:1.7}
+        .block{margin-top:16px;border:1px solid var(--line);border-radius:16px;background:var(--panel-2);padding:16px}
+        .block-head{font-size:14px;font-weight:950;margin-bottom:12px}
+        .prompt-text{white-space:pre-wrap;color:var(--text);font-size:14px;line-height:1.75;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+        .prompt-inline-edit{width:100%;min-height:300px;border:1px solid var(--line-2);border-radius:12px;background:var(--panel);color:var(--text);outline:0;padding:12px;font-size:14px;line-height:1.75;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;resize:vertical}
+        .detail-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+        .empty{height:100%;min-height:280px;display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:13px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;text-align:center}
+        .editor{display:grid;gap:10px}
+        .field{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:900;color:var(--muted)}
+        .field input,.field textarea{width:100%;border:1px solid var(--line-2);border-radius:12px;background:var(--panel);color:var(--text);outline:0;padding:10px 12px;font-size:13px;line-height:1.55;font-weight:650}
+        .field textarea{min-height:100px;resize:vertical}
+        .field textarea.prompt-edit{min-height:220px}
+        body.studio-theme-dark{--page:#08090c;--panel:#111216;--panel-2:#0c0d10;--line:#25262b;--line-2:#2f3a4d;--text:#e8e8ea;--muted:#9aa6b8;--faint:#657286;--strong:#d8dee9;--strong-text:#10141d;--soft:#171d29;--shadow:rgba(0,0,0,.34);color-scheme:dark}
+        @media(max-width:1100px){.layout{grid-template-columns:230px minmax(280px,1fr)}.detail-panel{grid-column:1/-1}.detail-grid{grid-template-columns:1fr}.image-frame{position:relative;max-width:420px}}
+        @media(max-width:760px){body{overflow:auto}.page{height:auto;padding:18px}.layout{display:flex;flex-direction:column}.panel{min-height:360px}.head{align-items:flex-start;flex-direction:column}.status{text-align:left}.detail-grid{grid-template-columns:1fr}}
+    </style>
+    <link rel="stylesheet" href="/static/theme.css?v=20260617-layout-fix-4">
+</head>
+<body class="prompt-library-page">
+<main class="page">
+    <header class="head">
+        <div>
+            <h1 class="title">PROMPT LIBRARY</h1>
+            <div class="sub">MY PRESETS / PROMPTDEXTER SYNC SOURCE</div>
+        </div>
+        <div class="actions">
+            <button class="btn secondary" type="button" onclick="newPreset()"><i data-lucide="file-plus-2" class="w-4 h-4"></i>新增我的预设</button>
+            <button id="syncBtn" class="btn" type="button" onclick="syncPromptDexter()" title="同步全部 PromptDexter 分类"><i data-lucide="refresh-cw" class="w-4 h-4"></i><span id="syncBtnText">同步</span></button>
+            <div id="status" class="status">准备就绪</div>
+        </div>
+    </header>
+
+    <section class="layout">
+        <aside class="panel side" id="side"></aside>
+        <section class="panel">
+            <div class="list-head">
+                <label class="search"><i data-lucide="search" class="w-4 h-4"></i><input id="queryInput" type="search" placeholder="搜索标题、说明、类别或标签"></label>
+            </div>
+            <div id="promptList" class="list"></div>
+        </section>
+        <section class="panel detail-panel">
+            <div id="detail" class="detail"></div>
+        </section>
+    </section>
+</main>
+
+<script>
+    function refreshIcons(){ if(window.lucide?.createIcons) window.lucide.createIcons(); }
+    const VIEW_STATE_KEY = 'infinite_canvas_prompt_library_view';
+    const state = {library:null, source:'promptdexter', category:'featured', selectedId:'', query:'', editing:false, creating:false, promptEditing:false};
+    const side = document.getElementById('side');
+    const promptList = document.getElementById('promptList');
+    const detail = document.getElementById('detail');
+    const statusEl = document.getElementById('status');
+    const queryInput = document.getElementById('queryInput');
+    let restoredListScrollTop = 0;
+
+    function setStatus(text){ statusEl.textContent = text || '准备就绪'; }
+    function escapeHtml(value=''){ return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+    const escapeAttr = escapeHtml;
+    function getStoredJson(key){
+        try {
+            const raw = window.localStorage ? window.localStorage.getItem(key) : '';
+            return raw ? JSON.parse(raw) : null;
+        } catch(e){ return null; }
+    }
+    function setStoredJson(key, value){
+        try { if(window.localStorage) window.localStorage.setItem(key, JSON.stringify(value)); }
+        catch(e){}
+    }
+    function restoreViewState(){
+        const saved = getStoredJson(VIEW_STATE_KEY);
+        if(!saved) return;
+        if(saved.source === 'mine' || saved.source === 'promptdexter') state.source = saved.source;
+        if(typeof saved.category === 'string') state.category = saved.category || (state.source === 'promptdexter' ? 'featured' : 'all');
+        if(typeof saved.selectedId === 'string') state.selectedId = saved.selectedId;
+        if(typeof saved.query === 'string'){
+            state.query = saved.query;
+            queryInput.value = saved.query;
+        }
+        restoredListScrollTop = Number(saved.listScrollTop || 0);
+    }
+    function saveViewState(){
+        if(!state.library) return;
+        setStoredJson(VIEW_STATE_KEY, {
+            source: state.source,
+            category: state.category,
+            selectedId: state.selectedId,
+            query: state.query,
+            listScrollTop: promptList.scrollTop || 0,
+        });
+    }
+    async function apiJson(url, options={}){
+        const res = await fetch(url, options);
+        const data = await res.json().catch(() => ({}));
+        if(!res.ok) throw new Error(data.detail || data.message || '操作失败');
+        return data;
+    }
+    async function copyText(text){
+        const value = String(text || '');
+        if(!value){ setStatus('没有可复制的提示词'); return; }
+        try { await navigator.clipboard.writeText(value); setStatus('已复制'); }
+        catch(e){
+            const ta = document.createElement('textarea');
+            ta.value = value; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+            setStatus('已复制');
+        }
+    }
+    function librarySource(){
+        if(!state.library) return {items:[], categories:[]};
+        return state.source === 'mine' ? state.library.my_presets : state.library.promptdexter;
+    }
+    function categoryName(id){
+        if(state.source === 'mine') return id || '我的预设';
+        const found = (state.library?.promptdexter?.categories || []).find(cat => cat.id === id);
+        return found?.name || id || '未分类';
+    }
+    function itemCategories(item){
+        if(state.source === 'mine') return (item.categories || []).filter(Boolean);
+        return (item.categories || []).map(categoryName).filter(Boolean);
+    }
+    function itemTags(item){
+        return (item.tags || []).map(tag => typeof tag === 'string' ? tag : tag.name).filter(Boolean);
+    }
+    function allItems(){ return librarySource().items || []; }
+    function itemById(id){
+        return allItems().find(item => item.id === id) || null;
+    }
+    function keepPromptdexterOrder(library, orderedIds){
+        const source = library?.promptdexter;
+        if(!source || !Array.isArray(source.items) || !orderedIds?.length) return;
+        const order = new Map(orderedIds.map((id, index) => [id, index]));
+        source.items = source.items.slice().sort((a, b) => {
+            const ai = order.has(a.id) ? order.get(a.id) : Number.MAX_SAFE_INTEGER;
+            const bi = order.has(b.id) ? order.get(b.id) : Number.MAX_SAFE_INTEGER;
+            return ai - bi;
+        });
+    }
+    function filteredItems(){
+        const query = state.query.trim().toLowerCase();
+        return allItems().filter(item => {
+            if(state.source === 'promptdexter' && state.category !== 'all' && !(item.categories || []).includes(state.category)) return false;
+            if(query){
+                const hay = [item.title, item.description, item.prompt, ...itemCategories(item), ...itemTags(item)].join(' ').toLowerCase();
+                if(!hay.includes(query)) return false;
+            }
+            return true;
+        });
+    }
+    function selectedItem(){
+        return itemById(state.selectedId) || filteredItems()[0] || null;
+    }
+    function alignCategoryToSelectedItem(){
+        if(state.source !== 'promptdexter' || state.category === 'all' || !state.selectedId) return false;
+        const item = itemById(state.selectedId);
+        if(!item) return false;
+        const itemCategories = item.categories || [];
+        if(itemCategories.includes(state.category)) return false;
+        const known = new Set((state.library?.promptdexter?.categories || []).map(cat => cat.id));
+        const nextCategory = itemCategories.find(categoryId => known.has(categoryId));
+        if(!nextCategory) return false;
+        state.category = nextCategory;
+        return true;
+    }
+    function categoryCount(categoryId){
+        if(categoryId === 'all') return allItems().length;
+        return allItems().filter(item => (item.categories || []).includes(categoryId)).length;
+    }
+    function renderSide(){
+        const source = librarySource();
+        const cats = state.library?.promptdexter?.categories || [];
+        side.innerHTML = `
+            <div class="side-title">来源</div>
+            <button class="tree-row parent ${state.source === 'mine' ? 'active' : ''}" type="button" onclick="setSource('mine')">
+                <span>我的预设</span><span class="tree-count">${state.library?.my_presets?.items?.length || 0}</span>
+            </button>
+            <button class="tree-row parent ${state.source === 'promptdexter' && state.category === 'all' ? 'active' : ''}" type="button" onclick="setSource('promptdexter','all')">
+                <span>PromptDexte</span><span class="tree-count">${state.library?.promptdexter?.items?.length || 0}</span>
+            </button>
+            ${state.source === 'promptdexter' ? cats.map(cat => `
+                <button class="tree-row child ${state.category === cat.id ? 'active' : ''}" type="button" onclick="setSource('promptdexter','${escapeAttr(cat.id)}')">
+                    <span>${escapeHtml(cat.name)}</span><span class="tree-count">${categoryCount(cat.id)}</span>
+                </button>
+            `).join('') : ''}
+            ${state.source === 'mine' ? `<div class="side-title">我的分类</div>${mineCategoryRows()}` : ''}
+        `;
+        refreshIcons();
+    }
+    function mineCategoryRows(){
+        const counts = {};
+        (state.library?.my_presets?.items || []).forEach(item => (item.categories || ['我的预设']).forEach(cat => counts[cat || '我的预设'] = (counts[cat || '我的预设'] || 0) + 1));
+        const names = Object.keys(counts);
+        if(!names.length) return `<div class="empty" style="min-height:120px">暂无分类</div>`;
+        return names.map(name => `<button class="tree-row child" type="button"><span>${escapeHtml(name)}</span><span class="tree-count">${counts[name]}</span></button>`).join('');
+    }
+    function renderList(){
+        const items = filteredItems();
+        if(!items.length){
+            promptList.innerHTML = '<div class="empty">暂无提示词</div>';
+            return;
+        }
+        if(!state.selectedId) state.selectedId = items[0].id;
+        promptList.innerHTML = items.map(item => `
+            <button type="button" class="prompt-card ${state.selectedId === item.id ? 'active' : ''}" onclick="selectItem('${escapeAttr(item.id)}')">
+                <div class="prompt-card-title">${escapeHtml(item.title || '未命名提示词')}</div>
+                <div class="prompt-card-desc">${escapeHtml(item.description || '暂无说明')}</div>
+                <div class="chips">${itemCategories(item).slice(0,3).map(name => `<span class="chip">${escapeHtml(name)}</span>`).join('')}${!item.detail_loaded && state.source === 'promptdexter' ? '<span class="chip">待补齐</span>' : ''}</div>
+            </button>
+        `).join('');
+    }
+    function renderPromptBody(item, promptText){
+        if(state.promptEditing && state.source === 'promptdexter'){
+            return `
+                <textarea id="promptEditText" class="prompt-inline-edit">${escapeHtml(item.prompt || '')}</textarea>
+                <div class="detail-actions">
+                    <button class="btn" type="button" onclick="savePromptText('${escapeAttr(item.id)}')"><i data-lucide="check" class="w-4 h-4"></i>保存</button>
+                    <button class="btn secondary" type="button" onclick="cancelPromptTextEdit()"><i data-lucide="x" class="w-4 h-4"></i>取消</button>
+                </div>
+            `;
+        }
+        return `
+            <div class="prompt-text">${escapeHtml(promptText)}</div>
+        `;
+    }
+    function renderPromptActions(item){
+        return `
+            <div class="detail-actions">
+                <button class="btn secondary" type="button" onclick="copyText(selectedItem().prompt)" ${item.prompt ? '' : 'disabled'}><i data-lucide="copy" class="w-4 h-4"></i>复制</button>
+                <button class="btn" type="button" onclick="editPrompt()" ${item.prompt ? '' : 'disabled'}><i data-lucide="pencil" class="w-4 h-4"></i>编辑</button>
+                ${state.source === 'promptdexter' ? `<button class="btn secondary" type="button" onclick="copyToMine('${escapeAttr(item.id)}')" ${item.prompt ? '' : 'disabled'}><i data-lucide="plus" class="w-4 h-4"></i>预设</button>` : `<button class="btn danger" type="button" onclick="deletePreset('${escapeAttr(item.id)}')"><i data-lucide="trash-2" class="w-4 h-4"></i>删除</button>`}
+            </div>
+        `;
+    }
+    function renderDetail(){
+        if(state.creating){ renderEditor(null, true); return; }
+        const item = selectedItem();
+        if(!item){ detail.innerHTML = '<div class="empty">请选择提示词</div>'; return; }
+        if(state.editing && state.source === 'mine'){ renderEditor(item, false); return; }
+        const promptText = item.prompt || (state.source === 'promptdexter' ? '提示词正在自动补齐，稍后即可复制和编辑。' : '未填写提示词');
+        detail.innerHTML = `
+            <div class="detail-stack">
+                <div class="detail-main">
+                    <div class="image-frame">${item.image_url ? `<img src="${escapeAttr(item.image_url)}" alt="${escapeAttr(item.title || '示例图')}">` : '<div class="image-empty">暂无示例图</div>'}</div>
+                    <div class="detail-summary">
+                        <div class="detail-title">${escapeHtml(item.title || '未命名提示词')}</div>
+                        <div class="detail-desc">${escapeHtml(item.description || '暂无说明')}</div>
+                        ${state.promptEditing ? '' : renderPromptActions(item)}
+                    </div>
+                </div>
+                <div class="block prompt-block">
+                    <div class="block-head">提示词</div>
+                    ${renderPromptBody(item, promptText)}
+                </div>
+                <div class="detail-meta-row">
+                    <div class="block meta-block">
+                        <div class="block-head">类别</div>
+                        <div class="chips">${itemCategories(item).map(name => `<span class="chip">${escapeHtml(name)}</span>`).join('') || '<span class="chip">未分类</span>'}</div>
+                    </div>
+                    <div class="block meta-block">
+                        <div class="block-head">标签</div>
+                        <div class="chips">${itemTags(item).map(name => `<span class="chip">${escapeHtml(name)}</span>`).join('') || '<span class="chip">暂无标签</span>'}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        refreshIcons();
+    }
+    function renderEditor(item, isNew){
+        const value = item || {title:'', description:'', prompt:'', image_url:'', categories:[], tags:[]};
+        const editorTitle = isNew ? (item ? '编辑提示词' : '新增我的预设') : '编辑提示词';
+        detail.innerHTML = `
+            <div class="block" style="margin-top:0">
+                <div class="block-head">${editorTitle}</div>
+                <div class="editor">
+                    <label class="field">中文标题<input id="editTitle" value="${escapeAttr(value.title || '')}" placeholder="提示词标题"></label>
+                    <label class="field">中文说明<textarea id="editDescription" placeholder="用途说明">${escapeHtml(value.description || '')}</textarea></label>
+                    <label class="field">提示词正文<textarea id="editPrompt" class="prompt-edit" placeholder="Prompt 原文或你的提示词">${escapeHtml(value.prompt || '')}</textarea></label>
+                    <label class="field">类别，多个用逗号分隔<input id="editCategories" value="${escapeAttr((value.categories || []).join(', '))}" placeholder="人物, 旅行"></label>
+                    <label class="field">标签，多个用逗号分隔<input id="editTags" value="${escapeAttr((value.tags || []).join(', '))}" placeholder="真实感, 户外"></label>
+                    <label class="field">示例图地址<input id="editImage" value="${escapeAttr(value.image_url || '')}" placeholder="/assets/library/example.png"></label>
+                    <div class="detail-actions">
+                        <button class="btn" type="button" onclick="${isNew ? 'saveNewPreset()' : `savePreset('${escapeAttr(value.id)}')`}"><i data-lucide="check" class="w-4 h-4"></i>保存</button>
+                        <button class="btn secondary" type="button" onclick="cancelEdit()"><i data-lucide="x" class="w-4 h-4"></i>取消</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        refreshIcons();
+    }
+    function ensureSelectedItemContext(){
+        if(state.selectedId && !itemById(state.selectedId)) state.selectedId = '';
+        if(state.source === 'promptdexter'){
+            if(!state.category) state.category = 'featured';
+            alignCategoryToSelectedItem();
+        }
+    }
+    function render(options={}){
+        renderSyncButton();
+        renderSide();
+        renderList();
+        renderDetail();
+        if(options.persist !== false) saveViewState();
+    }
+    function renderSyncButton(){
+        const btn = document.getElementById('syncBtn');
+        const text = document.getElementById('syncBtnText');
+        if(!btn || !text) return;
+        const currentCategory = state.source === 'promptdexter' && state.category && state.category !== 'all'
+            ? categoryName(state.category)
+            : '';
+        if(currentCategory){
+            text.textContent = '同步';
+            btn.title = `只同步 PromptDexter「${currentCategory}」分类`;
+        } else {
+            text.textContent = '同步';
+            btn.title = '同步全部 PromptDexter 分类';
+        }
+    }
+    function setSource(source, category=''){
+        state.source = source;
+        state.category = source === 'promptdexter' ? (category || 'featured') : 'all';
+        state.selectedId = '';
+        state.editing = false;
+        state.creating = false;
+        state.promptEditing = false;
+        render();
+    }
+    async function selectItem(id){
+        state.selectedId = id;
+        state.editing = false;
+        state.creating = false;
+        state.promptEditing = false;
+        render();
+        const item = selectedItem();
+        if(state.source === 'promptdexter' && item && !item.detail_loaded) await refreshDetail(id, true);
+    }
+    async function loadLibrary(){
+        const data = await apiJson('/api/prompt-library');
+        state.library = data.library;
+        ensureSelectedItemContext();
+        render({persist:false});
+        if(restoredListScrollTop) promptList.scrollTop = restoredListScrollTop;
+        saveViewState();
+        const item = selectedItem();
+        if(state.source === 'promptdexter' && item && !item.detail_loaded) await refreshDetail(item.id, true);
+    }
+    async function syncPromptDexter(){
+        const btn = document.getElementById('syncBtn');
+        btn.disabled = true;
+        setStatus('正在同步...');
+        try{
+            const categoryId = state.source === 'promptdexter' && state.category && state.category !== 'all' ? state.category : '';
+            const data = await apiJson('/api/promptdexter/sync', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({limit:0, fetch_details:12, force:true, category_id:categoryId})
+            });
+            state.library = data.library;
+            state.source = 'promptdexter';
+            state.category = state.category || 'featured';
+            state.promptEditing = false;
+            setStatus(data.skipped ? '刚同步过，已使用本地缓存' : `${categoryId ? '当前分类' : '全部分类'}同步完成：新增 ${data.added}，补齐 ${data.details}`);
+            render();
+        }catch(err){ setStatus(err.message || '同步失败'); }
+        finally{ btn.disabled = false; }
+    }
+    async function refreshDetail(id, quiet=false){
+        if(!quiet) setStatus('正在补齐提示词...');
+        const previousScrollTop = promptList.scrollTop;
+        const previousOrder = allItems().map(item => item.id);
+        try{
+            const data = await apiJson(`/api/promptdexter/items/${encodeURIComponent(id)}/refresh`, {method:'POST'});
+            keepPromptdexterOrder(data.library, previousOrder);
+            state.library = data.library;
+            state.selectedId = id;
+            alignCategoryToSelectedItem();
+            if(!quiet) setStatus('提示词已补齐');
+            render({persist:false});
+            promptList.scrollTop = previousScrollTop;
+            saveViewState();
+        }catch(err){ setStatus(err.message || '补齐失败'); }
+    }
+    async function copyToMine(id){
+        try{
+            const data = await apiJson('/api/prompt-library/presets', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({source_item_id:id})
+            });
+            state.library = data.library;
+            state.source = 'mine';
+            state.selectedId = data.item.id;
+            state.category = 'all';
+            state.promptEditing = false;
+            setStatus('已转为我的预设');
+            render();
+        }catch(err){ setStatus(err.message || '保存失败'); }
+    }
+    function editPrompt(){
+        const item = selectedItem();
+        if(!item || !item.prompt){ setStatus('提示词还未补齐'); return; }
+        state.creating = false;
+        if(state.source === 'mine'){
+            state.editing = true;
+            state.promptEditing = false;
+        } else {
+            state.editing = false;
+            state.promptEditing = true;
+        }
+        renderDetail();
+    }
+    function cancelPromptTextEdit(){ state.promptEditing = false; renderDetail(); }
+    async function savePromptText(id){
+        const value = document.getElementById('promptEditText')?.value?.trim() || '';
+        if(!value){ setStatus('提示词正文不能为空'); return; }
+        try{
+            const previousScrollTop = promptList.scrollTop;
+            const previousOrder = allItems().map(item => item.id);
+            const data = await apiJson(`/api/promptdexter/items/${encodeURIComponent(id)}/prompt`, {
+                method:'PATCH',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({prompt:value})
+            });
+            keepPromptdexterOrder(data.library, previousOrder);
+            state.library = data.library;
+            state.selectedId = data.item.id;
+            state.promptEditing = false;
+            setStatus('已保存提示词');
+            render({persist:false});
+            promptList.scrollTop = previousScrollTop;
+            saveViewState();
+        }catch(err){ setStatus(err.message || '保存失败'); }
+    }
+    function newPreset(){ state.source = 'mine'; state.creating = true; state.editing = false; state.promptEditing = false; state.selectedId = ''; render(); }
+    function cancelEdit(){ state.creating = false; state.editing = false; state.promptEditing = false; render(); }
+    function editorPayload(){
+        const split = value => String(value || '').split(',').map(x => x.trim()).filter(Boolean);
+        return {
+            title:document.getElementById('editTitle').value.trim(),
+            description:document.getElementById('editDescription').value.trim(),
+            prompt:document.getElementById('editPrompt').value.trim(),
+            categories:split(document.getElementById('editCategories').value),
+            tags:split(document.getElementById('editTags').value),
+            image_url:document.getElementById('editImage').value.trim()
+        };
+    }
+    async function saveNewPreset(){
+        try{
+            const data = await apiJson('/api/prompt-library/presets', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(editorPayload())});
+            state.library = data.library; state.source = 'mine'; state.category = 'all'; state.selectedId = data.item.id; state.creating = false; state.promptEditing = false; setStatus('已保存'); render();
+        }catch(err){ setStatus(err.message || '保存失败'); }
+    }
+    async function savePreset(id){
+        try{
+            const data = await apiJson(`/api/prompt-library/presets/${encodeURIComponent(id)}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(editorPayload())});
+            state.library = data.library; state.selectedId = data.item.id; state.editing = false; setStatus('已保存'); render();
+        }catch(err){ setStatus(err.message || '保存失败'); }
+    }
+    async function deletePreset(id){
+        if(!confirm('删除这个提示词预设？')) return;
+        try{
+            const data = await apiJson(`/api/prompt-library/presets/${encodeURIComponent(id)}`, {method:'DELETE'});
+            state.library = data.library; state.selectedId = ''; setStatus('已删除'); render();
+        }catch(err){ setStatus(err.message || '删除失败'); }
+    }
+    queryInput.addEventListener('input', event => {
+        state.query = event.target.value || '';
+        state.selectedId = '';
+        state.creating = false;
+        state.editing = false;
+        state.promptEditing = false;
+        render();
+    });
+    promptList.addEventListener('scroll', () => saveViewState(), {passive:true});
+    restoreViewState();
+    loadLibrary().catch(err => {
+        detail.innerHTML = `<div class="empty">${escapeHtml(err.message || '加载失败')}</div>`;
+        setStatus('加载失败');
+    });
+</script>
+</body>
+</html>

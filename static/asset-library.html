@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/logo.png" type="image/png">
+    <title>ASSETS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/static/theme.js?v=20260509"></script>
+    <style>
+        body{margin:0;min-height:100vh;background:#f8fafc;color:#111827;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+        .page{max-width:1280px;margin:0 auto;padding:0 40px 80px;margin-top:50px}
+        .head{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:64px}
+        @media(min-width:768px){.head{flex-direction:row;align-items:flex-end}}
+        .page-title{font-size:36px!important;line-height:1!important;font-weight:800!important;letter-spacing:-.05em!important;margin:0;color:#111827;text-transform:uppercase}
+        .sub{margin-top:4px;color:#9ca3af;font-size:10px;font-weight:700;letter-spacing:.5em;text-transform:uppercase}
+        .head-actions,.toolbar,.bulk-actions,.tabs{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+        .toolbar{justify-content:space-between;margin-bottom:22px}
+        .btn{height:42px;padding:0 16px;border-radius:999px;background:#111827;color:#fff;font-size:12px;font-weight:900;display:inline-flex;align-items:center;gap:8px}
+        .head-actions .btn{font-size:11px;letter-spacing:0}
+        .btn.secondary{background:#fff;color:#334155;border:1px solid #e2e8f0}
+        .btn.danger{background:#dc2626;color:#fff}
+        .btn:disabled{opacity:.42;pointer-events:none}
+        .tab{height:34px;padding:0 13px;border-radius:999px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:11px;font-weight:900;display:inline-flex;align-items:center;gap:7px}
+        .tab.active{background:#111827;color:#fff;border-color:#111827}
+        .folder-tab{display:inline-flex;align-items:center;border:1px solid #e2e8f0;border-radius:999px;background:#fff;overflow:hidden}
+        .folder-tab .tab{border:0;border-radius:0;background:transparent}
+        .folder-tab.active{background:#111827;border-color:#111827}
+        .folder-tab.active .tab{color:#fff}
+        .folder-delete{width:30px;height:34px;display:inline-flex;align-items:center;justify-content:center;color:#94a3b8;border-left:1px solid #e2e8f0}
+        .folder-delete:hover{background:#fee2e2;color:#dc2626}
+        .folder-tab.active .folder-delete{border-left-color:rgba(255,255,255,.18);color:#cbd5e1}
+        .folder-tab.active .folder-delete:hover{background:#991b1b;color:#fff}
+        .select{height:38px;min-width:160px;border:1px solid #e2e8f0;border-radius:999px;background:#fff;color:#334155;padding:0 12px;font-size:12px;font-weight:800;outline:none}
+        .selected-count{color:#94a3b8;font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}
+        .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
+        .card{position:relative;background:#fff;border:1px solid #e8edf3;border-radius:22px;overflow:hidden;box-shadow:0 1px 0 rgba(15,23,42,.02);transition:all .18s ease}
+        .card.selected{border-color:#111827;box-shadow:0 14px 34px rgba(15,23,42,.12)}
+        .thumb{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eef2f7;display:block}
+        .check{position:absolute;top:10px;left:10px;width:30px;height:30px;border-radius:999px;background:rgba(255,255,255,.94);border:1px solid #dbe3ed;display:flex;align-items:center;justify-content:center;color:#94a3b8;z-index:2}
+        .card.selected .check{background:#111827;border-color:#111827;color:#fff}
+        .meta{padding:12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+        .name{font-size:12px;font-weight:800;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+        .icon-btn{width:32px;height:32px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:#94a3b8}
+        .icon-btn:hover{background:#e0f2fe;color:#0369a1}
+        .del:hover{background:#fee2e2;color:#dc2626}
+        .empty{padding:96px 20px;text-align:center;color:#cbd5e1;font-size:12px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
+        .ctx-menu,.ctx-sub{position:fixed;z-index:9999;min-width:170px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 18px 44px rgba(15,23,42,.18);padding:6px;display:none}
+        .ctx-sub{z-index:10000;min-width:150px;max-height:300px;overflow:auto}
+        .ctx-menu.open,.ctx-sub.open{display:block}
+        .ctx-item{position:relative;display:flex;align-items:center;gap:10px;height:36px;padding:0 12px;border-radius:9px;font-size:13px;font-weight:700;color:#334155;cursor:pointer;white-space:nowrap;user-select:none}
+        .ctx-item:hover{background:#f1f5f9}
+        .ctx-item.disabled{opacity:.4;pointer-events:none}
+        .ctx-item.danger{color:#dc2626}
+        .ctx-item.danger:hover{background:#fee2e2}
+        .ctx-item .chev{margin-left:auto;color:#94a3b8}
+        .ctx-sep{height:1px;background:#eef2f7;margin:5px 4px}
+        .ctx-toast{position:fixed;left:50%;bottom:36px;transform:translateX(-50%);background:#111827;color:#fff;font-size:12px;font-weight:800;padding:10px 16px;border-radius:999px;box-shadow:0 12px 30px rgba(15,23,42,.28);z-index:10001;opacity:0;transition:opacity .18s ease;pointer-events:none}
+        .ctx-toast.show{opacity:1}
+    </style>
+    <link rel="stylesheet" href="/static/theme.css?v=20260706-lovart-pages-1">
+</head>
+<body class="asset-library-page">
+    <main class="page">
+        <header class="head">
+            <div class="space-y-1">
+                <h1 class="page-title">ASSETS</h1>
+                <div class="sub">IMAGES FOR ENHANCE, EDIT, ANGLE AND LMM</div>
+            </div>
+            <div class="head-actions">
+                <button class="btn secondary" type="button" onclick="createFolder()"><i data-lucide="folder-plus" class="w-4 h-4"></i>CREATE FOLDER</button>
+                <button class="btn" type="button" onclick="document.getElementById('fileInput').click()"><i data-lucide="upload" class="w-4 h-4"></i>UPLOAD IMAGE</button>
+            </div>
+            <input id="fileInput" type="file" accept="image/*" multiple hidden>
+        </header>
+        <section class="toolbar">
+            <div id="tabs" class="tabs"></div>
+            <div class="bulk-actions">
+                <span id="selectedCount" class="selected-count">0 SELECTED</span>
+                <button id="selectAllBtn" class="btn secondary" type="button" onclick="toggleSelectAll()">SELECT ALL</button>
+                <select id="moveSelect" class="select" onchange="moveSelected(this.value)">
+                    <option value="">MOVE TO...</option>
+                </select>
+                <button id="deleteSelectedBtn" class="btn danger" type="button" onclick="deleteSelected()">DELETE SELECTED</button>
+            </div>
+        </section>
+        <section id="grid" class="grid"></section>
+    </main>
+    <script>
+        function refreshIcons(){ if(window.lucide?.createIcons) window.lucide.createIcons(); }
+        refreshIcons();
+        const grid = document.getElementById('grid');
+        const tabs = document.getElementById('tabs');
+        const selected = new Set();
+        let assets = [];
+        let folders = [];
+        let currentFolder = 'all';
+
+        async function loadAssets(){
+            const data = await fetch('/api/assets').then(r => r.json());
+            assets = data.items || [];
+            folders = data.folders || [];
+            selected.clear();
+            renderTabs();
+            renderGrid();
+            renderBulkControls();
+        }
+
+        function filteredItems(){
+            if(currentFolder === 'all') return assets;
+            if(currentFolder === 'root') return assets.filter(item => !item.folder_id);
+            return assets.filter(item => item.folder_id === currentFolder);
+        }
+
+        function renderTabs(){
+            const rootCount = assets.filter(item => !item.folder_id).length;
+            const folderTabs = folders.map(folder => {
+                const count = assets.filter(item => item.folder_id === folder.id).length;
+                return `<span class="folder-tab ${currentFolder === folder.id ? 'active' : ''}">
+                    <button class="tab" type="button" onclick="setFolder('${escapeHtml(folder.id)}')"><i data-lucide="folder" class="w-3.5 h-3.5"></i>${escapeHtml(folder.name)} ${count}</button>
+                    <button class="folder-delete" type="button" onclick="deleteFolder('${escapeHtml(folder.id)}','${escapeHtml(folder.name)}')" title="删除文件夹"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                </span>`;
+            }).join('');
+            tabs.innerHTML = `
+                <button class="tab ${currentFolder === 'all' ? 'active' : ''}" type="button" onclick="setFolder('all')">ALL ${assets.length}</button>
+                <button class="tab ${currentFolder === 'root' ? 'active' : ''}" type="button" onclick="setFolder('root')">NO FOLDER ${rootCount}</button>
+                ${folderTabs}
+            `;
+        }
+
+        function renderGrid(){
+            const items = filteredItems();
+            if(!items.length){
+                grid.className = '';
+                grid.innerHTML = '<div class="empty">NO ASSETS</div>';
+                refreshIcons();
+                return;
+            }
+            grid.className = 'grid';
+            grid.innerHTML = items.map(item => `
+                <article class="card ${selected.has(item.id) ? 'selected' : ''}" data-id="${escapeHtml(item.id)}">
+                    <button class="check" type="button" onclick="toggleSelect('${escapeHtml(item.id)}')" title="选择"><i data-lucide="${selected.has(item.id) ? 'check' : 'plus'}" class="w-4 h-4"></i></button>
+                    <img class="thumb" src="${escapeHtml(item.url)}" alt="" onclick="toggleSelect('${escapeHtml(item.id)}')">
+                    <div class="meta">
+                        <div class="name" title="${escapeHtml(item.name || '')}">${escapeHtml(item.name || 'image')}</div>
+                        <div class="actions">
+                            <button class="icon-btn" type="button" data-url="${escapeHtml(item.url)}" data-name="${escapeHtml(item.name || 'asset.png')}" onclick="downloadAsset(this)" title="下载"><i data-lucide="download" class="w-4 h-4"></i></button>
+                            <button class="icon-btn del" type="button" onclick="deleteAsset('${escapeHtml(item.id)}')" title="删除"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+                </article>
+            `).join('');
+            refreshIcons();
+        }
+
+        function renderBulkControls(){
+            const count = selected.size;
+            document.getElementById('selectedCount').textContent = `${count} SELECTED`;
+            document.getElementById('deleteSelectedBtn').disabled = count === 0;
+            document.getElementById('moveSelect').disabled = count === 0;
+            document.getElementById('selectAllBtn').disabled = filteredItems().length === 0;
+            document.getElementById('moveSelect').innerHTML = `
+                <option value="">MOVE TO...</option>
+                <option value="root">NO FOLDER</option>
+                ${folders.map(folder => `<option value="${escapeHtml(folder.id)}">${escapeHtml(folder.name)}</option>`).join('')}
+            `;
+        }
+
+        function setFolder(folderId){
+            currentFolder = folderId;
+            selected.clear();
+            renderTabs();
+            renderGrid();
+            renderBulkControls();
+        }
+
+        function toggleSelect(id){
+            selected.has(id) ? selected.delete(id) : selected.add(id);
+            renderGrid();
+            renderBulkControls();
+        }
+
+        function toggleSelectAll(){
+            const items = filteredItems();
+            const allSelected = items.length && items.every(item => selected.has(item.id));
+            if(allSelected) items.forEach(item => selected.delete(item.id));
+            else items.forEach(item => selected.add(item.id));
+            renderGrid();
+            renderBulkControls();
+        }
+
+        async function createFolder(){
+            const name = prompt('文件夹名称');
+            if(!name || !name.trim()) return;
+            await fetch('/api/assets/folders', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({name:name.trim()})
+            });
+            await loadAssets();
+        }
+
+        async function deleteFolder(folderId, folderName){
+            if(!folderId) return;
+            if(!confirm(`删除文件夹「${folderName || 'Folder'}」？文件夹内资产会移到 NO FOLDER，不会删除图片。`)) return;
+            await fetch(`/api/assets/folders/${encodeURIComponent(folderId)}`, {method:'DELETE'});
+            if(currentFolder === folderId) currentFolder = 'all';
+            await loadAssets();
+        }
+
+        async function moveSelected(folderId){
+            const ids = [...selected];
+            document.getElementById('moveSelect').value = '';
+            if(!ids.length || !folderId) return;
+            await fetch('/api/assets/move', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({ids, folder_id:folderId === 'root' ? '' : folderId})
+            });
+            await loadAssets();
+        }
+
+        function downloadAsset(button){
+            const url = button.dataset.url || '';
+            const filename = button.dataset.name || 'asset.png';
+            if(!url) return;
+            const link = document.createElement('a');
+            const isLocal = url.startsWith('/output/') || url.startsWith('/assets/');
+            link.href = isLocal
+                ? `/api/download-output?url=${encodeURIComponent(url)}&name=${encodeURIComponent(filename)}`
+                : url;
+            link.download = filename;
+            link.rel = 'noopener';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+
+        async function deleteAsset(id){
+            if(!confirm('删除这张资产？对应 Archive 记录也会删除。')) return;
+            await fetch(`/api/assets/${encodeURIComponent(id)}`, {method:'DELETE'});
+            await loadAssets();
+        }
+
+        async function deleteSelected(){
+            const ids = [...selected];
+            if(!ids.length) return;
+            if(!confirm(`删除 ${ids.length} 张资产？对应 Archive 记录也会删除。`)) return;
+            await fetch('/api/assets/bulk-delete', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({ids})
+            });
+            await loadAssets();
+        }
+
+        document.getElementById('fileInput').onchange = async (event) => {
+            const files = [...(event.target.files || [])];
+            if(!files.length) return;
+            const form = new FormData();
+            files.forEach(file => form.append('files', file));
+            await fetch('/api/assets/upload', {method:'POST', body:form});
+            event.target.value = '';
+            await loadAssets();
+        };
+
+        function escapeHtml(str){ return String(str == null ? '' : str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+
+        /* ---------- 右键菜单：复制/粘贴/移动/编组/重命名/删除 ---------- */
+        const clipboard = [];            // 已复制的资产 id（库内副本用）
+        let ctxTargets = [];             // 当前右键作用的资产 id
+        const ctxMenu = document.createElement('div'); ctxMenu.className = 'ctx-menu';
+        const ctxSub  = document.createElement('div'); ctxSub.className  = 'ctx-sub';
+        const ctxToast = document.createElement('div'); ctxToast.className = 'ctx-toast';
+        document.body.append(ctxMenu, ctxSub, ctxToast);
+
+        let toastTimer = null;
+        function toast(msg){
+            ctxToast.textContent = msg;
+            ctxToast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => ctxToast.classList.remove('show'), 1600);
+        }
+        function closeCtx(){ ctxMenu.classList.remove('open'); ctxSub.classList.remove('open'); }
+        document.addEventListener('click', e => { if(!ctxMenu.contains(e.target) && !ctxSub.contains(e.target)) closeCtx(); });
+        document.addEventListener('scroll', closeCtx, true);
+        window.addEventListener('resize', closeCtx);
+        document.addEventListener('keydown', e => { if(e.key === 'Escape') closeCtx(); });
+
+        function resolveTargets(id){
+            return (selected.has(id) && selected.size > 0) ? [...selected] : [id];
+        }
+        function place(el, x, y){
+            el.style.left = '0px'; el.style.top = '0px'; el.classList.add('open');
+            const w = el.offsetWidth, h = el.offsetHeight;
+            el.style.left = Math.max(8, Math.min(x, window.innerWidth  - w - 8)) + 'px';
+            el.style.top  = Math.max(8, Math.min(y, window.innerHeight - h - 8)) + 'px';
+        }
+        function openCtx(x, y, id){
+            ctxTargets = resolveTargets(id);
+            const single = ctxTargets.length === 1;
+            const pasteOff = clipboard.length === 0;
+            ctxMenu.innerHTML = `
+                <div class="ctx-item" data-act="copy"><i data-lucide="copy" class="w-4 h-4"></i>复制${single ? '' : ' ('+ctxTargets.length+')'}</div>
+                <div class="ctx-item ${pasteOff ? 'disabled' : ''}" data-act="paste"><i data-lucide="clipboard-paste" class="w-4 h-4"></i>粘贴${pasteOff ? '' : ' ('+clipboard.length+')'}</div>
+                <div class="ctx-item" data-act="move"><i data-lucide="folder-input" class="w-4 h-4"></i>移动到<i data-lucide="chevron-right" class="w-4 h-4 chev"></i></div>
+                <div class="ctx-item" data-act="group"><i data-lucide="folder-plus" class="w-4 h-4"></i>编组</div>
+                <div class="ctx-item ${single ? '' : 'disabled'}" data-act="rename"><i data-lucide="pencil" class="w-4 h-4"></i>重命名</div>
+                <div class="ctx-sep"></div>
+                <div class="ctx-item danger" data-act="delete"><i data-lucide="trash-2" class="w-4 h-4"></i>删除${single ? '' : ' ('+ctxTargets.length+')'}</div>`;
+            ctxSub.classList.remove('open');
+            place(ctxMenu, x, y);
+            refreshIcons();
+        }
+        function openMoveSub(anchor){
+            ctxSub.innerHTML = `
+                <div class="ctx-item" data-folder="root"><i data-lucide="folder-minus" class="w-4 h-4"></i>移出分组</div>
+                <div class="ctx-sep"></div>
+                ${folders.length
+                    ? folders.map(f => `<div class="ctx-item" data-folder="${escapeHtml(f.id)}"><i data-lucide="folder" class="w-4 h-4"></i>${escapeHtml(f.name)}</div>`).join('')
+                    : '<div class="ctx-item disabled">暂无分组</div>'}`;
+            const r = anchor.getBoundingClientRect();
+            ctxSub.classList.add('open');
+            const w = ctxSub.offsetWidth, h = ctxSub.offsetHeight;
+            let left = r.right + 4; if(left + w > window.innerWidth - 8) left = r.left - w - 4;
+            let top = r.top;        if(top + h  > window.innerHeight - 8) top = window.innerHeight - h - 8;
+            ctxSub.style.left = Math.max(8, left) + 'px';
+            ctxSub.style.top  = Math.max(8, top) + 'px';
+            refreshIcons();
+        }
+
+        grid.addEventListener('contextmenu', e => {
+            const card = e.target.closest('.card');
+            if(!card) return;
+            e.preventDefault();
+            openCtx(e.clientX, e.clientY, card.dataset.id);
+        });
+        ctxMenu.addEventListener('click', async e => {
+            const item = e.target.closest('.ctx-item');
+            if(!item || item.classList.contains('disabled')) return;
+            const act = item.dataset.act;
+            if(act === 'move'){ openMoveSub(item); return; }   // 保持主菜单，展开子菜单
+            const targets = ctxTargets.slice();
+            closeCtx();
+            if(act === 'copy'){ clipboard.length = 0; clipboard.push(...targets); toast(`已复制 ${targets.length} 项，可粘贴到任意分组`); }
+            else if(act === 'paste'){ await pasteAssets(); }
+            else if(act === 'group'){ await groupTargets(targets); }
+            else if(act === 'rename'){ await renameTarget(targets[0]); }
+            else if(act === 'delete'){ await deleteTargets(targets); }
+        });
+        ctxSub.addEventListener('click', async e => {
+            const item = e.target.closest('.ctx-item');
+            if(!item || item.classList.contains('disabled') || !item.dataset.folder) return;
+            const targets = ctxTargets.slice();
+            const folder = item.dataset.folder;
+            closeCtx();
+            await moveAssetsTo(targets, folder);
+        });
+
+        async function moveAssetsTo(ids, folderId){
+            if(!ids.length) return;
+            await fetch('/api/assets/move', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({ ids, folder_id: folderId === 'root' ? '' : folderId })
+            });
+            await loadAssets();
+        }
+        async function pasteAssets(){
+            if(!clipboard.length) return;
+            const folderId = (currentFolder === 'all' || currentFolder === 'root') ? '' : currentFolder;
+            for(const id of clipboard){
+                await fetch('/api/assets/duplicate', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({ id, folder_id: folderId })
+                });
+            }
+            await loadAssets();
+            toast(`已粘贴 ${clipboard.length} 项副本`);
+        }
+        async function groupTargets(ids){
+            if(!ids.length) return;
+            const name = prompt('新分组名称');
+            if(!name || !name.trim()) return;
+            const res = await fetch('/api/assets/folders', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({ name: name.trim() })
+            }).then(r => r.json());
+            const fid = res?.folder?.id;
+            if(!fid) return;
+            await fetch('/api/assets/move', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({ ids, folder_id: fid })
+            });
+            await loadAssets();
+        }
+        async function renameTarget(id){
+            const cur = (assets.find(a => a.id === id) || {}).name || '';
+            const name = prompt('重命名', cur);
+            if(name === null || !name.trim()) return;
+            await fetch('/api/assets/rename', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({ id, name: name.trim() })
+            });
+            await loadAssets();
+        }
+        async function deleteTargets(ids){
+            if(!ids.length) return;
+            if(!confirm(`删除 ${ids.length} 张资产？对应 Archive 记录也会删除。`)) return;
+            await fetch('/api/assets/bulk-delete', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({ ids })
+            });
+            await loadAssets();
+        }
+
+        loadAssets();
+    </script>
+</body>
+</html>

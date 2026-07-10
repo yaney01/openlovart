@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cowart Canvas</title>
+    <script type="module" crossorigin src="/static/cowart/assets/index-ChYAZ9ph.js?v=20260709-history-autorefresh"></script>
+    <link rel="stylesheet" crossorigin href="/static/cowart/assets/style-Bb2PeKfH.css?v=20260709-history-autorefresh">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      (() => {
+        const GAP = 20;
+
+        function selectedImageBounds(editor) {
+          const selectedIds = editor?.getSelectedShapeIds?.() || [];
+          const shape =
+            editor?.getOnlySelectedShape?.() ||
+            (selectedIds.length === 1
+              ? editor.getShape(selectedIds[0])
+              : null);
+          if (!shape || shape.type !== "image") return null;
+          const bounds = editor.getShapePageBounds?.(shape.id);
+          if (!bounds) return null;
+          const topLeft = editor.pageToViewport({ x: bounds.x, y: bounds.y });
+          const bottomRight = editor.pageToViewport({
+            x: bounds.x + bounds.w,
+            y: bounds.y + bounds.h,
+          });
+          return {
+            left: topLeft.x,
+            right: bottomRight.x,
+          };
+        }
+
+        function positionAnglePanel() {
+          const panel = document.querySelector(".cowart-angle-panel");
+          const anchor = panel?.closest(".cowart-image-edit-anchor");
+          const editor = window.__cowartEditor;
+          if (!panel || !anchor || !editor) return;
+
+          const bounds = selectedImageBounds(editor);
+          if (!bounds) return;
+
+          const panelWidth = panel.getBoundingClientRect().width || 272;
+          const preferredLeft = bounds.right + GAP;
+          const fallbackLeft = bounds.left - panelWidth - GAP;
+          const maxLeft = window.innerWidth - panelWidth - GAP;
+          const left =
+            preferredLeft <= maxLeft
+              ? preferredLeft
+              : Math.max(GAP, fallbackLeft);
+          anchor.style.left = `${Math.round(left)}px`;
+        }
+
+        function isTypingTarget(target) {
+          return !!target?.closest?.(
+            'input, textarea, select, [contenteditable="true"], [contenteditable=""]',
+          );
+        }
+
+        function handleCanvasShortcut(event) {
+          if (event.defaultPrevented || isTypingTarget(event.target)) return;
+          const editor = window.__cowartEditor;
+          if (!editor) return;
+          const key = event.key.toLowerCase();
+          const mod = event.metaKey || event.ctrlKey;
+          const shift = event.shiftKey;
+          const selected = () => editor.getSelectedShapeIds?.() || [];
+          let handled = false;
+
+          if (mod && !shift && key === "z" && editor.canUndo?.()) {
+            editor.undo();
+            handled = true;
+          } else if (
+            (mod && shift && key === "z" && editor.canRedo?.()) ||
+            (mod && key === "y" && editor.canRedo?.())
+          ) {
+            editor.redo();
+            handled = true;
+          } else if ((key === "backspace" || key === "delete") && selected().length) {
+            editor.deleteShapes?.(selected());
+            handled = true;
+          } else if ((mod && (key === "=" || key === "+")) || key === "+") {
+            editor.zoomIn?.(undefined, {
+              animation: { duration: editor.options?.animationMediumMs ?? 180 },
+            });
+            handled = true;
+          } else if ((mod && key === "-") || key === "-") {
+            editor.zoomOut?.(undefined, {
+              animation: { duration: editor.options?.animationMediumMs ?? 180 },
+            });
+            handled = true;
+          } else if (shift && key === "1") {
+            editor.zoomToFit?.({
+              animation: { duration: editor.options?.animationMediumMs ?? 180 },
+            });
+            handled = true;
+          } else if (shift && key === "2" && selected().length) {
+            editor.zoomToSelection?.({
+              animation: { duration: editor.options?.animationMediumMs ?? 180 },
+            });
+            handled = true;
+          }
+
+          if (handled) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }
+
+        function isBlankCanvasTarget(target) {
+          if (
+            !target ||
+            isTypingTarget(target) ||
+            target.closest?.(
+              [
+                ".cowart-lovart-chrome",
+                ".cowart-ai-generation-panel",
+                ".cowart-font-generator-panel",
+                ".cowart-image-edit-overlay",
+                ".tlui-menu-zone",
+                "button",
+                "input",
+                "textarea",
+                "select",
+                "[role='button']",
+                "[data-shape-id]",
+                ".tl-shape",
+                ".tl-text",
+                ".tl-shape-indicator",
+              ].join(","),
+            )
+          ) {
+            return false;
+          }
+          return !!target.closest?.(".tl-container, .cowart-canvas");
+        }
+
+        function currentShapeIds(editor) {
+          return new Set((editor?.getCurrentPageShapes?.() || []).map((shape) => shape.id));
+        }
+
+        function currentTextShapeIds(editor) {
+          return new Set(
+            (editor?.getCurrentPageShapes?.() || [])
+              .filter((shape) => shape?.type === "text")
+              .map((shape) => shape.id),
+          );
+        }
+
+        function isTextToolActive(editor) {
+          const toolId = editor?.getCurrentToolId?.() || "";
+          return toolId === "text" || toolId.startsWith("text.");
+        }
+
+        function shapeTextContent(value) {
+          if (typeof value === "string") return value;
+          if (!value || typeof value !== "object") return "";
+          if (typeof value.text === "string") return value.text;
+          if (Array.isArray(value)) return value.map(shapeTextContent).join("");
+          return Object.values(value).map(shapeTextContent).join("");
+        }
+
+        function textShapeContent(shape) {
+          const props = shape?.props || {};
+          return [
+            props.text,
+            props.richText,
+            props.plainText,
+            props.label,
+          ].map(shapeTextContent).join("");
+        }
+
+        let lastBlankCanvasClick = null;
+        let blankCanvasTextGuard = null;
+        let knownTextShapeIds = new Set();
+        let textToolGuardEditor = null;
+        let stopTextToolGuard = null;
+        let activeTextEditingId = null;
+
+        function clearBlankCanvasTextCreation() {
+          const guard = blankCanvasTextGuard;
+          const editor = window.__cowartEditor;
+          if (!guard || !editor || performance.now() > guard.until) return;
+
+          const editingId = editor.getEditingShapeId?.();
+          const removeIds = [];
+          for (const shape of editor.getCurrentPageShapes?.() || []) {
+            if (shape?.type !== "text") continue;
+            const isNewShape = !guard.shapeIds.has(shape.id);
+            const isEmptyText = textShapeContent(shape).trim().length === 0;
+            if (isNewShape || (shape.id === editingId && isEmptyText)) {
+              removeIds.push(shape.id);
+            }
+          }
+
+          if (removeIds.length) {
+            editor.deleteShapes?.([...new Set(removeIds)]);
+            editor.setCurrentTool?.("select");
+          }
+        }
+
+        function enforceTextToolOnly() {
+          const editor = window.__cowartEditor;
+          if (!editor) return;
+
+          const editingId = editor.getEditingShapeId?.();
+          const editingShape = editingId ? editor.getShape?.(editingId) : null;
+          if (editingShape?.type === "text") {
+            activeTextEditingId = editingId;
+            knownTextShapeIds = currentTextShapeIds(editor);
+            return;
+          }
+
+          if (isTextToolActive(editor)) {
+            if (activeTextEditingId) {
+              activeTextEditingId = null;
+              editor.setCurrentTool?.("select");
+            }
+            knownTextShapeIds = currentTextShapeIds(editor);
+            return;
+          }
+
+          activeTextEditingId = null;
+          const deleteIds = [];
+          for (const shape of editor.getCurrentPageShapes?.() || []) {
+            if (shape?.type !== "text") continue;
+            if (!knownTextShapeIds.has(shape.id)) {
+              deleteIds.push(shape.id);
+            }
+          }
+
+          if (editingId) {
+            const editingShape = editor.getShape?.(editingId);
+            if (editingShape?.type === "text") {
+              editor.setEditingShape?.(null);
+              editor.setCurrentTool?.("select");
+            }
+          }
+
+          if (deleteIds.length) {
+            editor.deleteShapes?.([...new Set(deleteIds)]);
+            editor.setCurrentTool?.("select");
+          }
+
+          knownTextShapeIds = currentTextShapeIds(editor);
+        }
+
+        function installTextToolGuard() {
+          const editor = window.__cowartEditor;
+          if (!editor || textToolGuardEditor === editor) return;
+
+          stopTextToolGuard?.();
+          textToolGuardEditor = editor;
+          knownTextShapeIds = currentTextShapeIds(editor);
+          const stopDocument = editor.store?.listen?.(enforceTextToolOnly, {
+            source: "all",
+            scope: "document",
+          });
+          const stopSession = editor.store?.listen?.(enforceTextToolOnly, {
+            source: "all",
+            scope: "session",
+          });
+          stopTextToolGuard = () => {
+            stopDocument?.();
+            stopSession?.();
+            textToolGuardEditor = null;
+          };
+          enforceTextToolOnly();
+        }
+
+        function finishTextToolBeforeRepeat(event) {
+          const editor = window.__cowartEditor;
+          if (!editor || !isTextToolActive(editor) || !isBlankCanvasTarget(event.target)) return;
+          const editingId = editor.getEditingShapeId?.();
+          const editingShape = editingId ? editor.getShape?.(editingId) : null;
+          if (editingShape?.type !== "text") return;
+          activeTextEditingId = null;
+          editor.setCurrentTool?.("select");
+          knownTextShapeIds = currentTextShapeIds(editor);
+        }
+
+        function blockBlankCanvasDoubleClick(event) {
+          if (!isBlankCanvasTarget(event.target)) return;
+
+          const editor = window.__cowartEditor;
+          const now = performance.now();
+          const previousClick = lastBlankCanvasClick;
+          const nativeDoubleClick = (event.detail || 0) >= 2;
+          const repeatedBlankClick =
+            event.type === "pointerdown" &&
+            previousClick &&
+            now - previousClick.time < 450 &&
+            Math.hypot(event.clientX - previousClick.x, event.clientY - previousClick.y) < 10;
+
+          if (event.type === "pointerdown") {
+            lastBlankCanvasClick = {
+              time: now,
+              x: event.clientX,
+              y: event.clientY,
+              shapeIds: currentShapeIds(editor),
+            };
+          } else if (event.type === "mousedown" && window.PointerEvent && !nativeDoubleClick) {
+            return;
+          }
+
+          if (!nativeDoubleClick && !repeatedBlankClick) return;
+
+          blankCanvasTextGuard = {
+            until: now + 900,
+            shapeIds: previousClick?.shapeIds || currentShapeIds(editor),
+          };
+          editor?.setCurrentTool?.("select");
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation?.();
+          requestAnimationFrame(clearBlankCanvasTextCreation);
+          setTimeout(clearBlankCanvasTextCreation, 40);
+          setTimeout(clearBlankCanvasTextCreation, 160);
+          setTimeout(clearBlankCanvasTextCreation, 360);
+        }
+
+        async function cowartReferenceForShape(editor, shape) {
+          if (!editor || !shape) return null;
+          const assetId = shape.props?.assetId;
+          const asset = assetId ? editor.getAsset?.(assetId) : null;
+          const src = asset?.props?.src;
+          if (src) {
+            return {
+              url: src,
+              name: asset?.props?.name || shape.props?.name || shape.id,
+              shapeId: shape.id,
+            };
+          }
+          if (typeof editor.toImageDataUrl === "function") {
+            const exported = await editor.toImageDataUrl([shape], {
+              background: false,
+              darkMode: false,
+              format: "png",
+              padding: 0,
+              pixelRatio: 1,
+            });
+            if (exported?.url) {
+              return {
+                url: exported.url,
+                name: shape.props?.name || shape.type || shape.id,
+                shapeId: shape.id,
+              };
+            }
+          }
+          return null;
+        }
+
+        async function sendShapeToDialog(editor, shape) {
+          const reference = await cowartReferenceForShape(editor, shape);
+          if (!reference?.url) return false;
+          const detail = { ...reference, source: "cowart" };
+          window.dispatchEvent(
+            new CustomEvent("cowart:add-reference-to-dialog", { detail }),
+          );
+          window.parent?.postMessage(
+            { type: "cowart:add-reference-to-dialog", ...detail },
+            "*",
+          );
+          return true;
+        }
+
+        async function handleSendToDialogEvent(event) {
+          const detail = event.detail || {};
+          if (detail.url) return;
+          const editor = window.__cowartEditor;
+          if (!editor) return;
+          const ids = detail.shapeIds || (detail.shapeId ? [detail.shapeId] : []);
+          for (const id of ids) {
+            const shape = editor.getShape?.(id);
+            if (shape) await sendShapeToDialog(editor, shape);
+          }
+        }
+
+        async function handleSendToDialogClick(event) {
+          if (
+            event.defaultPrevented ||
+            event.button !== 0 ||
+            !(event.metaKey || event.ctrlKey) ||
+            isTypingTarget(event.target)
+          ) {
+            return;
+          }
+          if (event.target?.closest?.(".cowart-lovart-chrome, .cowart-ctx-menu")) return;
+          const editor = window.__cowartEditor;
+          if (!editor?.screenToPage || !editor?.getShapeAtPoint) return;
+          try {
+            const pagePoint = editor.screenToPage({
+              x: event.clientX,
+              y: event.clientY,
+            });
+            const hit = editor.getShapeAtPoint(pagePoint, { hitInside: true });
+            if (!hit) return;
+            const sent = await sendShapeToDialog(editor, hit);
+            if (!sent) return;
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation?.();
+          } catch {}
+        }
+
+        // 每类工作流的画板占位符标签 -> 对应的 /api/history 类型。
+        // 后端在成功时会把结果同时写入 history 和资产库，因此可用 history 补齐卡住的占位符。
+        const COWART_GEN_HISTORY_TYPE = {
+          "角度控制": "angle",
+          "高清放大": "enhance",
+          "快速编辑": "image_edit",
+          "按标注修改": "image_edit",
+        };
+
+        async function fetchHistoryByType(type) {
+          try {
+            const response = await fetch(
+              `/api/history?type=${encodeURIComponent(type)}`,
+              { cache: "no-store" },
+            );
+            const data = await response.json();
+            return Array.isArray(data) ? data : [];
+          } catch {
+            return [];
+          }
+        }
+
+        // 恢复所有卡住的生成占位符（工作流已成功、结果已进资产库，但画板未同步）。
+        // 覆盖全部工作流：角度控制、高清放大、快速编辑、按标注修改。
+        async function recoverGeneratingPlaceholders() {
+          const editor = window.__cowartEditor;
+          if (!editor) return;
+          const placeholders = editor
+            .getCurrentPageShapes()
+            .filter(
+              (shape) =>
+                shape.type === "image" &&
+                shape.meta?.cowartGenerating &&
+                COWART_GEN_HISTORY_TYPE[shape.meta?.cowartGenLabel],
+            );
+          if (!placeholders.length) return;
+
+          const neededTypes = [
+            ...new Set(
+              placeholders.map(
+                (shape) => COWART_GEN_HISTORY_TYPE[shape.meta.cowartGenLabel],
+              ),
+            ),
+          ];
+          const historyByType = {};
+          await Promise.all(
+            neededTypes.map(async (type) => {
+              historyByType[type] = await fetchHistoryByType(type);
+            }),
+          );
+
+          placeholders.forEach((shape, index) => {
+            // 占位符可能在等待期间已被别的流程处理，重新读取最新状态。
+            const current = editor.getShape(shape.id);
+            if (!current || current.meta?.cowartGenerating !== true) return;
+
+            const type = COWART_GEN_HISTORY_TYPE[shape.meta.cowartGenLabel];
+            const history = historyByType[type] || [];
+            const latest = history.find((item) => item?.images?.[0]);
+            const url = latest?.images?.[0];
+            if (!url) return;
+
+            // 时间戳守卫：只有当最新结果的完成时间不早于本次生成开始时间时才补齐，
+            // 避免正在运行中的占位符被上一轮的旧结果误填。
+            const finishedAt = Number(latest.timestamp || 0) * 1000;
+            const startedAt = Number(shape.meta?.cowartGenStartedAt || 0);
+            if (startedAt && finishedAt && finishedAt + 5000 < startedAt) {
+              return;
+            }
+
+            const assetId = `asset:cowart_recover_${Date.now()}_${index}`;
+            const width = Number(shape.props?.w) || 512;
+            const height = Number(shape.props?.h) || 512;
+            editor.createAssets([
+              {
+                id: assetId,
+                type: "image",
+                typeName: "asset",
+                props: {
+                  name: "Image",
+                  src: url,
+                  w: width,
+                  h: height,
+                  fileSize: 1,
+                  mimeType: url.toLowerCase().endsWith(".jpg")
+                    ? "image/jpeg"
+                    : "image/png",
+                  isAnimated: false,
+                },
+                meta: { cowartDuck2api: true },
+              },
+            ]);
+            editor.updateShape({
+              id: shape.id,
+              type: "image",
+              props: { w: width, h: height, assetId },
+              meta: {
+                ...shape.meta,
+                cowartGenerating: false,
+                cowartDuck2api: true,
+              },
+            });
+          });
+        }
+
+        const schedule = () => requestAnimationFrame(positionAnglePanel);
+        new MutationObserver(schedule).observe(document.body, {
+          childList: true,
+          subtree: true,
+        });
+        window.addEventListener("resize", schedule);
+        window.addEventListener("wheel", schedule, { passive: true });
+        window.addEventListener("pointerup", schedule);
+        window.addEventListener("message", (event) => {
+          if (event.data?.type !== "cowart:set-chat-panel-width") return;
+          const width = Math.max(0, Number(event.data.width) || 0);
+          document.documentElement.style.setProperty(
+            "--cowart-chat-panel-width",
+            `${width}px`,
+          );
+        });
+        document.addEventListener(
+          "dragstart",
+          (event) => {
+            if (event.target?.closest?.(".cowart-canvas img, .tl-container img")) {
+              event.preventDefault();
+            }
+          },
+          true,
+        );
+        document.addEventListener("keydown", handleCanvasShortcut, true);
+        document.addEventListener("pointerdown", finishTextToolBeforeRepeat, true);
+        document.addEventListener("pointerdown", blockBlankCanvasDoubleClick, true);
+        document.addEventListener("mousedown", blockBlankCanvasDoubleClick, true);
+        document.addEventListener("dblclick", blockBlankCanvasDoubleClick, true);
+        document.addEventListener("pointerdown", handleSendToDialogClick, true);
+        window.addEventListener("cowart:add-reference-to-dialog", handleSendToDialogEvent);
+        setInterval(() => {
+          installTextToolGuard();
+          enforceTextToolOnly();
+        }, 250);
+        setInterval(recoverGeneratingPlaceholders, 5000);
+        setTimeout(recoverGeneratingPlaceholders, 1000);
+      })();
+    </script>
+  </body>
+</html>

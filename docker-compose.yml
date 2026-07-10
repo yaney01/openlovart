@@ -1,0 +1,18 @@
+services:
+  infinite-canvas:
+    build: .
+    image: infinite-canvas:latest
+    container_name: infinite-canvas
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./API/.env
+    volumes:
+      # 仅持久化配置与结构化数据；图片走图床，不落盘。
+      - ./API:/app/API
+      - ./data:/app/data
+    # output/ 与 assets/ 不再挂载：remote 图床模式下图片上传后即删，
+    # 容器内仅作临时缓冲，随容器销毁，不占用宿主机磁盘。
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

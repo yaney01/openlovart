@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/logo.png" type="image/png">
+    <title>Z-IMAGE | 高清放大</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/static/theme.js?v=20260509"></script>
+    <script src="/static/asset-picker.js?v=1"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        :root {
+            --accent: #111827;
+            --bg: #f9fafb;
+            --card: #ffffff;
+            --easing: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- 极简悬浮浅灰滚动条 (无底色/左移) --- */
+        *::-webkit-scrollbar {
+            width: 10px !important;
+            height: 10px !important;
+            background: transparent !important;
+        }
+
+        *::-webkit-scrollbar-track {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        *::-webkit-scrollbar-thumb {
+            background-color: #d8d8d8 !important;
+            border: 3px solid transparent !important;
+            border-right-width: 5px !important;
+            /* 增加右侧间距，使滚动条向左位移 */
+            background-clip: padding-box !important;
+            border-radius: 10px !important;
+        }
+
+        *::-webkit-scrollbar-thumb:hover {
+            background-color: #c0c0c0 !important;
+        }
+
+        *::-webkit-scrollbar-corner {
+            background: transparent !important;
+        }
+
+        * {
+            scrollbar-width: thin !important;
+            scrollbar-color: #d8d8d8 transparent !important;
+        }
+
+        body {
+            background-color: var(--bg);
+            font-family: 'Inter', -apple-system, sans-serif;
+            color: var(--accent);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container-box {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 40px;
+            margin-top: 50px;
+        }
+
+        /* 统一组件风格 */
+        .glass-btn {
+            background: #111827;
+            transition: all 0.3s var(--easing);
+        }
+
+        .glass-btn:hover {
+            background: #000;
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+        }
+
+        .glass-btn:active {
+            transform: scale(0.98);
+        }
+
+        .upload-item {
+            background: var(--card);
+            border: 1px dashed #e2e8f0;
+            transition: all 0.4s var(--easing);
+        }
+
+        .upload-item:hover {
+            border-color: #000;
+            background: #fff;
+            transform: translateY(-2px);
+        }
+
+        .result-frame {
+            background: #ffffff;
+            border-radius: 32px;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.02);
+        }
+
+        .masonry-item {
+            break-inside: avoid;
+            margin-bottom: 1.25rem;
+            background: #fff;
+            border: 1px solid #f1f5f9;
+            border-radius: 24px;
+            overflow: hidden;
+            transition: all 0.5s var(--easing);
+        }
+
+        .masonry-item:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        /* 统一精致 Range 设计 */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 2px;
+            background: #e5e5e5;
+            border-radius: 1px;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            background: var(--accent);
+            margin-top: -6px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s var(--easing);
+            cursor: pointer;
+        }
+
+        .masonry-grid {
+            columns: 2;
+            column-gap: 1.25rem;
+        }
+
+        @media (min-width: 768px) {
+            .masonry-grid {
+                columns: 4;
+            }
+        }
+
+        @keyframes b-loading {
+            0% {
+                transform: scale(1);
+                background: #000;
+            }
+
+            50% {
+                transform: scale(1.15);
+                background: #444;
+            }
+
+            100% {
+                transform: scale(1);
+                background: #000;
+            }
+        }
+
+        .loading-box {
+            width: 10px;
+            height: 10px;
+            animation: b-loading 1s infinite var(--easing);
+        }
+
+    </style>
+    <link rel="stylesheet" href="/static/theme.css?v=20260616-responsive-atelier-3">
+</head>
+
+<body class="selection:bg-black selection:text-white">
+
+    <div class="container-box">
+        <header class="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+            <div class="space-y-1">
+                <h1 class="text-4xl font-extrabold tracking-[-0.05em] flex items-center">
+                    UPSCALE<span class="text-base mt-3 ml-1"></span>
+                </h1>
+                <p class="text-[10px] font-bold uppercase tracking-[0.5em] text-gray-400">SEEDVR2 IMAGE UPSCALER</p>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            <div class="lg:col-span-4 space-y-10">
+                <section class="group">
+                    <h3 class="text-[9px] font-black uppercase tracking-[0.3em] mb-5 text-gray-400">01. Input Source
+                    </h3>
+                    <div id="dropzone"
+                        class="upload-item relative overflow-hidden rounded-2xl aspect-square flex flex-col items-center justify-center cursor-pointer">
+                        <input type="file" id="fileInput" class="hidden" accept="image/*">
+
+                        <div id="uploadContent" class="text-center space-y-4">
+                            <div
+                                class="w-14 h-14 rounded-full border border-gray-200 bg-white flex items-center justify-center mx-auto group-hover:bg-black group-hover:text-white group-hover:border-black transition-all duration-500">
+                                <i data-lucide="arrow-up" class="w-5 h-5"></i>
+                            </div>
+                            <p class="text-[11px] font-bold uppercase tracking-tight">Drop image here</p>
+                        </div>
+
+                        <img id="previewImg" class="hidden absolute inset-4 w-[calc(100%-2rem)] h-[calc(100%-2rem)] object-contain">
+
+                        <div id="changeOverlay"
+                            class="hidden absolute inset-0 bg-black/10 backdrop-blur-sm items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                            <span
+                                class="bg-white px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-2xl">Change</span>
+                        </div>
+                    </div>
+                    <button type="button" onclick="openAssetForEnhance()"
+                        class="mt-3 w-full h-11 rounded-2xl border border-gray-200 bg-white text-[10px] font-black uppercase tracking-[0.25em] text-gray-500 hover:text-black hover:border-black transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="library" class="w-4 h-4"></i>
+                        从资产库选择
+                    </button>
+                </section>
+
+                <section class="space-y-10">
+                    <h3 class="text-[9px] font-black uppercase tracking-[0.3em] text-gray-400">02. Parameters</h3>
+
+                    <div class="space-y-5">
+                        <div class="flex justify-between items-end">
+                            <label class="text-xs font-bold uppercase tracking-tight text-gray-800">UPSCALE_BY</label>
+                            <span id="upscaleByVal" class="font-mono text-xs font-bold">2.0</span>
+                        </div>
+                        <input type="range" id="upscaleBySlider" min="1" max="5" step="0.1" value="2"
+                            class="w-full">
+                    </div>
+
+                    <button id="genBtn" onclick="handleGenerate()"
+                        class="glass-btn w-full py-5 text-white rounded-xl font-bold text-[11px] uppercase tracking-[0.4em] flex items-center justify-center gap-3 shadow-xl shadow-black/10 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i data-lucide="zap" id="btnIcon" class="w-4 h-4 text-yellow-400"></i>
+                        <span id="btnText">Begin Upscaling</span>
+                    </button>
+                </section>
+            </div>
+
+            <div id="resultColumn" class="lg:col-span-8">
+                <div id="resultBox"
+                    class="result-frame relative flex items-center justify-center overflow-hidden group">
+                    <div id="emptyState" class="text-center space-y-4 opacity-20">
+                        <i data-lucide="layout" class="w-12 h-12 mx-auto stroke-[1px]"></i>
+                        <p class="text-[10px] font-black tracking-[0.5em] uppercase">Canvas Ready</p>
+                    </div>
+
+                    <div id="loadingState" class="hidden flex flex-col items-center gap-5">
+                        <div class="loading-box"></div>
+                        <p class="text-[10px] font-bold uppercase tracking-[0.4em] animate-pulse">Computing pixels...
+                        </p>
+                    </div>
+
+                    <img id="outputImg"
+                        class="hidden w-full h-full object-contain p-8 cursor-zoom-in transition-all duration-700 hover:scale-[1.02]"
+                        onclick="zoomImage()">
+
+                    <a id="downloadBtn" href="#" download
+                        class="hidden absolute bottom-8 right-8 w-14 h-14 bg-white shadow-2xl rounded-2xl flex items-center justify-center hover:bg-black hover:text-white transition-all duration-500 border border-gray-100">
+                        <i data-lucide="download" class="w-5 h-5"></i>
+                    </a>
+                </div>
+            </div>
+        </main>
+
+        <section class="mt-32">
+            <div class="flex items-center gap-6 mb-10">
+                <h2 class="text-[11px] font-black uppercase tracking-[0.5em]">Archive</h2>
+                <div class="h-px flex-1 bg-black/5"></div>
+            </div>
+            <div id="masonry" class="masonry-grid"></div>
+            <div id="loadMoreTrigger"
+                class="py-16 text-center opacity-20 text-[10px] font-bold uppercase tracking-widest">
+                End of Archive
+            </div>
+        </section>
+    </div>
+
+    <div id="lightbox" onclick="handleOutsideClick(event)"
+        class="hidden fixed inset-0 z-50 bg-white/95 backdrop-blur-3xl flex items-center justify-center p-8">
+        <button type="button" onclick="event.stopPropagation(); closeLightbox()"
+            class="absolute top-10 right-10 z-20 p-2 hover:rotate-90 transition-transform duration-500" aria-label="关闭预览">
+            <i data-lucide="x" class="w-8 h-8"></i>
+        </button>
+
+        <div class="max-w-6xl w-full h-full flex flex-col items-center justify-center pointer-events-none">
+            <div class="relative w-full flex justify-center">
+                <div id="compareContainer"
+                    class="hidden relative w-full h-[75vh] rounded-3xl overflow-hidden bg-[#f8f8f9] border border-gray-200/50 shadow-2xl">
+                    <img id="compareGenerated" class="absolute inset-0 w-full h-full object-contain">
+                    <div id="compareOriginalWrapper"
+                        class="absolute inset-0 w-full h-full overflow-hidden border-r-2 border-white/80">
+                        <img id="compareOriginal" class="absolute inset-0 w-full h-full object-contain">
+                    </div>
+                    <div id="compareSlider" class="absolute inset-y-0 left-1/2 w-0.5 bg-white z-20 cursor-ew-resize">
+                        <div
+                            class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white shadow-2xl rounded-full flex items-center justify-center border border-gray-100">
+                            <i data-lucide="move-horizontal" class="w-4 h-4 text-black"></i>
+                        </div>
+                    </div>
+                </div>
+                <img id="lightboxImg" src="" class="hidden max-w-full max-h-[80vh] w-auto h-auto object-contain rounded-3xl shadow-2xl pointer-events-auto" onclick="event.stopPropagation()">
+                <div id="lightboxRes"
+                    class="absolute top-4 left-4 bg-black/30 backdrop-blur-md border border-white/20 text-white px-3 py-1.5 rounded-full text-[10px] font-medium tracking-wider opacity-0 transition-opacity duration-300 pointer-events-none z-30">
+                </div>
+            </div>
+            <div class="mt-8">
+                <button type="button" onclick="event.stopPropagation(); downloadLightboxImage()"
+                    class="px-10 py-4 bg-black text-white rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-3 shadow-xl pointer-events-auto">
+                    <i data-lucide="save" class="w-4 h-4"></i> Save Master
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        function generateUUID() {
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                try { return crypto.randomUUID(); } catch (e) { }
+            }
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+        const storage = (() => {
+            try {
+                if (window.localStorage) return window.localStorage;
+            } catch (e) { }
+            const fallback = {};
+            return {
+                getItem: key => fallback[key] || null,
+                setItem: (key, value) => { fallback[key] = String(value); },
+                removeItem: key => { delete fallback[key]; }
+            };
+        })();
+        const CLIENT_ID = storage.getItem("client_id") || generateUUID();
+        storage.setItem("client_id", CLIENT_ID);
+        const PENDING_RESULT_KEY = 'pending_result_enhance';
+        const INPUT_STATE_KEY = 'enhance_input_state';
+
+        let uploadedPath = "";
+        let currentResult = null;
+        let currentLightboxData = null;
+
+        const dropzone = document.getElementById('dropzone');
+        const resultColumn = document.getElementById('resultColumn');
+        const resultBox = document.getElementById('resultBox');
+        const generateButton = document.getElementById('genBtn');
+        const fileInput = document.getElementById('fileInput');
+        const previewImg = document.getElementById('previewImg');
+        const upscaleBySlider = document.getElementById('upscaleBySlider');
+        const upscaleByVal = document.getElementById('upscaleByVal');
+
+        function syncResultBoxHeight() {
+            const dropzoneRect = dropzone.getBoundingClientRect();
+            const buttonRect = generateButton.getBoundingClientRect();
+            const targetHeight = Math.max(dropzoneRect.height, buttonRect.bottom - dropzoneRect.top);
+            if (targetHeight > 0) resultBox.style.height = `${Math.round(targetHeight)}px`;
+            if (window.matchMedia('(min-width: 1024px)').matches) {
+                const columnTop = resultColumn.getBoundingClientRect().top;
+                const offset = Math.max(0, Math.round(dropzoneRect.top - columnTop));
+                resultBox.style.marginTop = `${offset}px`;
+            } else {
+                resultBox.style.marginTop = '';
+            }
+        }
+
+        dropzone.onclick = () => fileInput.click();
+        fileInput.onchange = (e) => handleFile(e.target.files[0]);
+
+        // Drag and Drop
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('border-black', 'bg-gray-50');
+        });
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('border-black', 'bg-gray-50');
+        });
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-black', 'bg-gray-50');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        // Paste support
+        let isHovering = false;
+        dropzone.addEventListener('mouseenter', () => isHovering = true);
+        dropzone.addEventListener('mouseleave', () => isHovering = false);
+        window.addEventListener('paste', (e) => {
+            if (!isHovering) return;
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let item of items) {
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    handleFile(file);
+                    break;
+                }
+            }
+        });
+
+        upscaleBySlider.oninput = function () {
+            upscaleByVal.innerText = parseFloat(this.value).toFixed(1);
+            saveInputState();
+        };
+
+        function applyInputPreview(src) {
+            if (!src) return;
+            previewImg.src = src;
+            previewImg.classList.remove('hidden');
+            document.getElementById('uploadContent').classList.add('opacity-0');
+            document.getElementById('changeOverlay').classList.replace('hidden', 'flex');
+        }
+
+        function saveInputState(extra = {}) {
+            if (!uploadedPath && !previewImg.src) return;
+            try {
+                storage.setItem(INPUT_STATE_KEY, JSON.stringify({
+                    uploadedPath,
+                    previewSrc: previewImg.src || '',
+                    upscaleBy: parseFloat(upscaleBySlider.value).toFixed(1),
+                    saved_at: Date.now(),
+                    ...extra
+                }));
+            } catch (e) {
+                console.warn('Enhance input cache failed', e);
+            }
+        }
+
+        function restoreInputState() {
+            let state = null;
+            try { state = JSON.parse(storage.getItem(INPUT_STATE_KEY) || 'null'); } catch (e) { }
+            if (!state) return;
+            if (Date.now() - Number(state.saved_at || 0) > 24 * 60 * 60 * 1000) {
+                storage.removeItem(INPUT_STATE_KEY);
+                return;
+            }
+            uploadedPath = state.uploadedPath || '';
+            if (state.upscaleBy) {
+                upscaleBySlider.value = state.upscaleBy;
+                upscaleByVal.innerText = parseFloat(state.upscaleBy).toFixed(1);
+            }
+            applyInputPreview(state.previewSrc || '');
+            if (uploadedPath) {
+                generateButton.disabled = false;
+                const btnText = document.getElementById('btnText');
+                if (btnText) btnText.innerText = "Begin Upscaling";
+            }
+        }
+
+        function showPendingLoading() {
+            const btn = document.getElementById('genBtn');
+            btn.disabled = true;
+            btn.style.backgroundColor = '#333';
+            btn.innerHTML = `<i data-lucide="zap" class="w-4 h-4 text-yellow-400 fill-yellow-400 animate-pulse"></i><span class="tracking-[0.4em] text-[11px] uppercase">Processing...</span>`;
+            lucide.createIcons();
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('outputImg').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+        }
+
+        function resetGenerateButton() {
+            const btn = document.getElementById('genBtn');
+            btn.disabled = false;
+            btn.style.backgroundColor = '';
+            btn.innerHTML = `<i data-lucide="zap" class="w-4 h-4 text-yellow-400"></i><span id="btnText">Begin Upscaling</span>`;
+            lucide.createIcons();
+        }
+
+        async function handleFile(file) {
+            if (!file) return;
+            uploadedPath = "";
+            const btn = document.getElementById('genBtn');
+            const btnText = document.getElementById('btnText');
+
+            // Disable button during upload
+            btn.disabled = true;
+            btnText.innerText = "Uploading...";
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                applyInputPreview(e.target.result);
+                saveInputState({ previewSrc: e.target.result });
+            };
+            reader.readAsDataURL(file);
+
+            const formData = new FormData();
+            formData.append('files', file);
+            try {
+                const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || `Upload failed status: ${res.status}`);
+                }
+                const data = await res.json();
+                if (!data.files?.[0]?.comfy_name) throw new Error("Upload failed: missing file name");
+                uploadedPath = data.files[0].comfy_name;
+                saveInputState();
+                // Enable button after successful upload
+                btn.disabled = false;
+                btnText.innerText = "Begin Upscaling";
+            } catch (err) {
+                console.error("Upload error", err);
+                btnText.innerText = "Upload Failed";
+                btn.disabled = false;
+            }
+        }
+
+        async function openAssetForEnhance() {
+            AssetPicker.open(async (item) => {
+                const btn = document.getElementById('genBtn');
+                const btnText = document.getElementById('btnText');
+                btn.disabled = true;
+                btnText.innerText = "Uploading...";
+                applyInputPreview(item.url);
+                saveInputState({ previewSrc: item.url });
+                try {
+                    const res = await fetch('/api/assets/upload-to-comfy', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({url: item.url, name: item.name || 'asset.png'})
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.detail || '资产上传失败');
+                    uploadedPath = data.comfy_name;
+                    saveInputState();
+                    btnText.innerText = "Begin Upscaling";
+                } catch (err) {
+                    alert(err.message || '资产上传失败');
+                    btnText.innerText = "Upload Failed";
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        }
+
+        async function handleGenerate() {
+            if (!uploadedPath) {
+                const dropzone = document.getElementById('dropzone');
+                dropzone.style.transition = "0.2s";
+                dropzone.style.borderColor = "#ef4444";
+                dropzone.style.transform = "scale(0.98)";
+                setTimeout(() => { dropzone.style.borderColor = ""; dropzone.style.transform = "scale(1)"; }, 300);
+                return;
+            }
+            const btn = document.getElementById('genBtn');
+            btn.disabled = true;
+            btn.style.backgroundColor = '#333';
+            btn.innerHTML = `<i data-lucide="zap" class="w-4 h-4 text-yellow-400 fill-yellow-400 animate-pulse"></i><span class="tracking-[0.4em] text-[11px] uppercase">Processing...</span>`;
+            lucide.createIcons();
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('outputImg').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+
+            let debugStep = "Start";
+            try {
+                debugStep = "Upscale Request";
+                const upscaleBy = Number(parseFloat(upscaleBySlider.value).toFixed(1));
+                const seed = Math.floor(Math.random() * 4294967295);
+                markPendingResult('enhance');
+                const upscaleRes = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        workflow_json: "upscale.json",
+                        params: {
+                            "24": { "image": uploadedPath },
+                            "47:30": { "value": upscaleBy },
+                            "47:27": { "seed": seed }
+                        },
+                        type: "enhance",
+                        client_id: CLIENT_ID
+                    })
+                });
+                const finalData = await upscaleRes.json();
+                if (finalData.error) throw new Error("Upscale API Error: " + finalData.error);
+                if (!finalData.images?.length) throw new Error("Upscale failed: No images returned");
+
+                clearPendingResult();
+                showResult(finalData);
+                document.getElementById('loadingState').classList.add('hidden');
+                renderImageCard(finalData, true);
+
+            } catch (error) {
+                clearPendingResult();
+                console.error("Generation Error at step " + debugStep, error);
+                document.getElementById('emptyState').classList.remove('hidden');
+                document.getElementById('loadingState').classList.add('hidden');
+                alert(`Error at ${debugStep}: ${error.message || JSON.stringify(error)}`);
+            } finally {
+                btn.disabled = false;
+                btn.style.backgroundColor = '';
+                btn.innerHTML = `<i data-lucide="zap" class="w-4 h-4 text-yellow-400"></i><span id="btnText">Begin Upscaling</span>`;
+                lucide.createIcons();
+            }
+        }
+
+        function zoomImage() {
+            if (currentResult) {
+                openLightbox(currentResult);
+            }
+        }
+
+        function showResult(data) {
+            if (!data?.images?.[0]) return;
+            currentResult = data;
+            const out = document.getElementById('outputImg');
+            const dl = document.getElementById('downloadBtn');
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('loadingState').classList.add('hidden');
+            out.src = data.images[0];
+            out.classList.remove('hidden');
+            dl.classList.remove('hidden');
+            dl.href = data.images[0];
+            dl.onclick = (event) => {
+                event.preventDefault();
+                downloadImageUrl(data.images[0], imageFileName(data, 'upscale'));
+            };
+        }
+
+        function markPendingResult(type) {
+            saveInputState({ running: true });
+            storage.setItem(PENDING_RESULT_KEY, JSON.stringify({
+                client_id: CLIENT_ID,
+                type,
+                started_at: Date.now(),
+                uploadedPath,
+                previewSrc: previewImg.src || '',
+                upscaleBy: parseFloat(upscaleBySlider.value).toFixed(1)
+            }));
+        }
+
+        function clearPendingResult() {
+            storage.removeItem(PENDING_RESULT_KEY);
+            saveInputState({ running: false });
+        }
+
+        function restorePendingResult(history) {
+            let pending = null;
+            try { pending = JSON.parse(storage.getItem(PENDING_RESULT_KEY) || 'null'); } catch (e) { }
+            if (!pending) return;
+            if (pending.previewSrc || pending.uploadedPath) {
+                uploadedPath = pending.uploadedPath || uploadedPath;
+                if (pending.upscaleBy) {
+                    upscaleBySlider.value = pending.upscaleBy;
+                    upscaleByVal.innerText = parseFloat(pending.upscaleBy).toFixed(1);
+                }
+                applyInputPreview(pending.previewSrc || previewImg.src || '');
+                showPendingLoading();
+            }
+            const match = (history || []).find(item => {
+                const itemTs = Number(item.timestamp || 0) * 1000;
+                return item?.images?.[0] && item.client_id === pending.client_id && item.type === pending.type && itemTs >= pending.started_at - 3000;
+            });
+            if (match) {
+                showResult(match);
+                clearPendingResult();
+                resetGenerateButton();
+                return;
+            }
+            if (Date.now() - pending.started_at > 30 * 60 * 1000) {
+                clearPendingResult();
+                resetGenerateButton();
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('emptyState').classList.remove('hidden');
+                return;
+            }
+            setTimeout(loadHistory, 2000);
+        }
+
+        function renderImageCard(data, isNew = false) {
+            const masonry = document.getElementById('masonry');
+            if (document.getElementById(`h-${data.timestamp}`)) return;
+
+            const card = document.createElement('div');
+            card.id = `h-${data.timestamp}`;
+            card.className = 'masonry-item group relative rounded-2xl overflow-hidden cursor-zoom-in';
+            card.onclick = () => openLightbox(data);
+
+            card.innerHTML = `
+                <img src="${data.images[0]}" class="w-full h-auto block transform group-hover:scale-105 transition-transform duration-1000">
+                <button type="button" class="archive-download absolute top-4 right-[4.5rem] z-20 w-12 h-10 rounded-2xl bg-white text-black shadow-xl flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black hover:text-white transition-all" title="下载" aria-label="下载归档图片">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                </button>
+                <button type="button" class="archive-delete absolute top-4 right-4 z-20 w-12 h-10 rounded-2xl bg-black text-white shadow-xl flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-gray-900 transition-all" title="删除" aria-label="删除归档图片">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-5">
+                    <p class="text-white text-[9px] font-black uppercase tracking-widest">Upscale Archive</p>
+                </div>
+            `;
+            card.querySelector('.archive-download').onclick = (event) => {
+                event.stopPropagation();
+                downloadImageUrl(data.images[0], imageFileName(data, 'upscale'));
+            };
+            card.querySelector('.archive-delete').onclick = (event) => deleteHistoryItem(data.timestamp, event);
+            isNew ? masonry.prepend(card) : masonry.appendChild(card);
+            lucide.createIcons();
+        }
+
+        function imageFileName(data, fallbackPrefix = 'image') {
+            const timestamp = data?.timestamp || Date.now();
+            const url = data?.images?.[0] || '';
+            const cleanName = decodeURIComponent(String(url).split('?')[0].split('/').pop() || '');
+            if (cleanName && cleanName.includes('.')) return cleanName;
+            return `${fallbackPrefix}-${timestamp}.png`;
+        }
+
+        function downloadImageUrl(url, filename = 'image.png') {
+            if (!url) return;
+            const link = document.createElement('a');
+            const isLocalOutput = url.startsWith('/output/') || url.startsWith('/assets/');
+            link.href = isLocalOutput
+                ? `/api/download-output?url=${encodeURIComponent(url)}&name=${encodeURIComponent(filename)}`
+                : url;
+            link.download = filename;
+            link.rel = 'noopener';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+
+        function downloadLightboxImage() {
+            const data = currentLightboxData || currentResult;
+            if (!data?.images?.[0]) return;
+            downloadImageUrl(data.images[0], imageFileName(data, 'upscale'));
+        }
+
+        async function deleteHistoryItem(timestamp, event) {
+            event.stopPropagation();
+            if (!confirm("删除这张图片？")) return;
+            const card = document.getElementById(`h-${timestamp}`);
+            try {
+                const res = await fetch('/api/history/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timestamp })
+                });
+                const data = await res.json();
+                if (data.success) card?.remove();
+                else alert(data.message || "删除失败");
+            } catch (e) {
+                alert("删除失败");
+            }
+        }
+
+        function initCompareEvents() {
+            const container = document.getElementById('compareContainer');
+            const wrapper = document.getElementById('compareOriginalWrapper');
+            const slider = document.getElementById('compareSlider');
+            let isDragging = false;
+
+            const updateSlider = (clientX) => {
+                const rect = container.getBoundingClientRect();
+                let x = clientX - rect.left;
+                let percent = (x / rect.width) * 100;
+                percent = Math.max(0, Math.min(100, percent));
+                wrapper.style.clipPath = `inset(0 ${100 - percent}% 0 0)`;
+                slider.style.left = `${percent}%`;
+            };
+
+            const start = (e) => { isDragging = true; e.preventDefault(); };
+            const end = () => isDragging = false;
+            const move = (e) => {
+                if (!isDragging) return;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                updateSlider(clientX);
+            };
+
+            container.addEventListener('mousedown', (e) => { if (e.target === slider) return; updateSlider(e.clientX); start(e); });
+            slider.addEventListener('mousedown', start);
+            window.addEventListener('mouseup', end);
+            window.addEventListener('mousemove', move);
+            slider.addEventListener('touchstart', start, { passive: false });
+            window.addEventListener('touchend', end);
+            window.addEventListener('touchmove', move, { passive: false });
+        }
+
+        function openLightbox(data) {
+            currentLightboxData = data;
+            const compare = document.getElementById('compareContainer');
+            const single = document.getElementById('lightboxImg');
+            const resPill = document.getElementById('lightboxRes');
+
+            resPill.style.opacity = '0';
+            const updateRes = (target) => {
+                if (target.naturalWidth) {
+                    resPill.innerText = `${target.naturalWidth} x ${target.naturalHeight}`;
+                    resPill.style.opacity = '1';
+                }
+            };
+
+            compare.classList.add('hidden');
+            single.classList.remove('hidden');
+            single.src = data.images[0];
+
+            single.onload = () => updateRes(single);
+            if (single.complete) updateRes(single);
+            document.getElementById('lightbox').classList.replace('hidden', 'flex');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.add('hidden');
+            lightbox.classList.remove('flex');
+            document.body.style.overflow = 'auto';
+        }
+
+        function handleOutsideClick(e) {
+            if (e.target.closest('#lightboxImg, button')) return;
+            closeLightbox();
+        }
+
+        async function loadHistory() {
+            try {
+                const res = await fetch('/api/history?type=enhance');
+                const history = await res.json();
+                history.forEach(item => renderImageCard(item));
+                restorePendingResult(history);
+            } catch (e) { }
+        }
+
+        window.onload = () => {
+            restoreInputState();
+            loadHistory();
+            initCompareEvents();
+            syncResultBoxHeight();
+            if (window.ResizeObserver) {
+                const frameObserver = new ResizeObserver(syncResultBoxHeight);
+                frameObserver.observe(dropzone);
+                frameObserver.observe(generateButton);
+            }
+        };
+        window.addEventListener('resize', syncResultBoxHeight);
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !document.getElementById('lightbox').classList.contains('hidden')) {
+                closeLightbox();
+            }
+        });
+        requestAnimationFrame(syncResultBoxHeight);
+    </script>
+</body>
+
+</html>

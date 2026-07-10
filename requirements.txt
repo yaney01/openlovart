@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+websockets
+requests
+pydantic
+python-multipart
+httpx
+pillow
+numpy

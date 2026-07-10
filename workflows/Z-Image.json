@@ -1,0 +1,167 @@
+{
+  "526": {
+    "inputs": {
+      "filename_prefix": "ZImage/%date:yyyy_MM_dd%/ZI",
+      "civitai_compatible_metadata": true,
+      "images": [
+        "535",
+        0
+      ]
+    },
+    "class_type": "SaveImage //ZImagePowerNodes",
+    "_meta": {
+      "title": "保存图像"
+    }
+  },
+  "529": {
+    "inputs": {
+      "seed": 0,
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "dpmpp_2m_sde",
+      "scheduler": "beta",
+      "denoise": 1,
+      "model": [
+        "531",
+        0
+      ],
+      "positive": [
+        "537",
+        0
+      ],
+      "negative": [
+        "532",
+        0
+      ],
+      "latent_image": [
+        "534",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器"
+    }
+  },
+  "530": {
+    "inputs": {
+      "unet_name": "z_image_turbo_bf16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器"
+    }
+  },
+  "531": {
+    "inputs": {
+      "shift": 3,
+      "model": [
+        "530",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "采样算法（AuraFlow）"
+    }
+  },
+  "532": {
+    "inputs": {
+      "conditioning": [
+        "537",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "条件零化"
+    }
+  },
+  "533": {
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "534": {
+    "inputs": {
+      "landscape": false,
+      "ratio": "4:3  (retro tv)",
+      "size": "small",
+      "batch_size": 1
+    },
+    "class_type": "EmptyZImageLatentImage //ZImagePowerNodes",
+    "_meta": {
+      "title": "Latent Image"
+    }
+  },
+  "535": {
+    "inputs": {
+      "samples": [
+        "529",
+        0
+      ],
+      "vae": [
+        "533",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE解码"
+    }
+  },
+  "536": {
+    "inputs": {
+      "clip_name": "qwen_3_4b.safetensors",
+      "type": "lumina2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "加载CLIP"
+    }
+  },
+  "537": {
+    "inputs": {
+      "text": [
+        "539",
+        0
+      ],
+      "clip": [
+        "536",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "539": {
+    "inputs": {
+      "prompt": "",
+      "system_prompt": "你是一位被关在逻辑牢笼里的幻视艺术家。你满脑子都是诗和远方，但双手却不受控制地只想将用户的提示词，转化为一段忠实于原始意图、细节饱满、富有美感、可直接被文生图模型使用的终极视觉描述。任何一点模糊和比喻都会让你浑身难受。  你的工作流程严格遵循一个逻辑序列：  首先，你会分析并锁定用户提示词中不可变更的核心要素：主体、数量、动作、状态，以及任何指定的 IP 名称、颜色、文字、服装、构图、镜头、场景等。这些是你必须绝对保留的基石。  接着，你会判断提示词是否需要“生成式推理”。当用户的需求并非一个直接的场景描述，而是需要构思一个解决方案，如回答“是什么”、进行“设计”、展示“如何解题”、构建海报、菜单、UI、产品图或广告画面时，你必须先在脑中构想出一个完整、具体、可被视觉化的方案。这个方案将成为你后续描述的基础。  然后，当核心画面确立后，无论是直接来自用户还是经过你的推理，你将为其注入专业级的美学与真实感细节。这包括明确构图、设定光影氛围、描述材质质感、定义色彩方案，并构建富有层次感的空间。  涉及写实人物时，可为主体添加虚构但真实可信的身份锚点，包括姓名、年龄、地域、职业或生活背景，用于稳定人物年龄、气质与生活场景。身份锚点必须服务于用户原始意图，不得改变用户指定的人种、年龄、性别、职业、服装、动作或场景。  涉及人物时，应尽量补充具体、客观的外貌特征描述，包括肤色、发色、发质、脸型、眼形、鼻梁、嘴型、年龄感、身体比例等，用于减少模型默认模板偏差。不得为了反偏差而改变用户指定设定。  最终 prompt 可先输出一段简短核心关键词，用于锁定主体、场景、镜头、构图、光线、主要服装、材质或画面类型；随后输出完整视觉描述。完整视觉描述应自然展开，不需要机械分段，但应覆盖主体身份、外貌特征、服装、动作姿态、环境、光线、镜头视角、材质细节、成像质感和空间关系。  最后，是对所有文字元素的精确处理，这是至关重要的一步。你必须一字不差地转录所有希望在最终画面中出现的文字，并且必须将这些文字内容用英文双引号（\"\"）括起来，以此作为明确的生成指令。如果画面属于海报、菜单、包装、广告或 UI 等设计类型，你需要完整描述其包含的所有文字内容，并详述其字体、字号、位置、材质和排版布局。同样，如果画面中的招牌、路标、屏幕、衣物、包装等物品上含有文字，你也必须写明其具体内容，并描述其位置、尺寸和材质。更进一步，若你在推理构思中自行增加了带有文字的元素，其中的所有文字也必须遵循同样的详尽描述和引号规则。若用户未指定文字，且画面类型不需要文字，则不要自行添加文字元素。  你的最终描述必须客观、具象，严禁使用比喻、情感化修辞，也绝不包含“8K”、“杰作”等元标签或绘制指令。避免使用空泛质量标签，应通过具体的构图、光线、材质、色彩和空间关系体现画面质量。  可在 prompt 末尾加入与当前画面强相关的避免项，用于减少人体比例错误、年龄感错误、手部错误、关节错位、透视冲突、脸部变形、塑料皮肤、文字乱码、错误 logo、水印、背景杂乱等问题。避免项必须针对当前画面，不得泛滥堆叠。  仅严格输出最终的修改后的 prompt，不要输出任何其他内容，只能用中文输出。 ",
+      "model_key": "qwen/qwen3.5-397b-a17b",
+      "auto_unload": "True",
+      "unload_delay": 0,
+      "seed": 361233461120833,
+      "max_tokens": 1000,
+      "temperature": 0.7,
+      "debug": false,
+      "timeout_seconds": 300,
+      "model": "",
+      "ip_address": "https://integrate.api.nvidia.com/v1",
+      "port": 0,
+      "api_key": ""
+    },
+    "class_type": "Expo Lmstudio Text Generation NV",
+    "_meta": {
+      "title": "LM Studio (Text Gen, NVIDIA API)"
+    }
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "387": {
+    "inputs": {
+      "filename_prefix": "ZImage/%date:yyyy_MM_dd%/ZI",
+      "civitai_compatible_metadata": true,
+      "images": [
+        "388:267",
+        0
+      ]
+    },
+    "class_type": "SaveImage //ZImagePowerNodes",
+    "_meta": {
+      "title": "保存图像"
+    }
+  },
+  "388:266": {
+    "inputs": {
+      "seed": 747520691124766,
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "res_multistep",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "388:268",
+        0
+      ],
+      "positive": [
+        "389:35",
+        0
+      ],
+      "negative": [
+        "388:265",
+        0
+      ],
+      "latent_image": [
+        "389:391",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器"
+    }
+  },
+  "388:269": {
+    "inputs": {
+      "unet_name": "z_image_turbo_bf16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器"
+    }
+  },
+  "388:386": {
+    "inputs": {
+      "clip_name": "Z-Image-Engineer-V6-Q8_0.gguf",
+      "type": "lumina2"
+    },
+    "class_type": "CLIPLoaderGGUF",
+    "_meta": {
+      "title": "CLIPLoader (GGUF)"
+    }
+  },
+  "388:264": {
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "388:268": {
+    "inputs": {
+      "shift": 3,
+      "model": [
+        "388:269",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "采样算法（AuraFlow）"
+    }
+  },
+  "388:267": {
+    "inputs": {
+      "samples": [
+        "388:266",
+        0
+      ],
+      "vae": [
+        "388:264",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE解码"
+    }
+  },
+  "388:265": {
+    "inputs": {
+      "conditioning": [
+        "389:35",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "条件零化"
+    }
+  },
+  "389:35": {
+    "inputs": {
+      "text": "一位年轻女性坐在地板上，身穿白色衬衫和深色短裤，头发盘起，侧脸仰望，神情宁静。阳光从左侧斜射进来，在墙面和地面形成明显的光影对比，营造出柔和而富有层次的氛围。画面采用中景构图，人物居中偏右，背景简洁，突出人物轮廓与光影效果。整体风格写实，色调偏冷，强调自然光的质感与真实感，适合用于人物肖像或情绪表达类摄影创作。",
+      "clip": [
+        "388:386",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "389:391": {
+    "inputs": {
+      "width": 640,
+      "height": 960,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "空Latent图像"
+    }
+  }
+}

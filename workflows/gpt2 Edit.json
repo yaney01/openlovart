@@ -1,0 +1,57 @@
+{
+  "268": {
+    "inputs": {
+      "prompt": [
+        "275",
+        0
+      ],
+      "seed": 126220530,
+      "quality": "low",
+      "background": "auto",
+      "size": "1024x1024",
+      "n": 1,
+      "model": "gpt-image-2",
+      "custom_width": 1024,
+      "custom_height": 1024,
+      "image": [
+        "271",
+        0
+      ]
+    },
+    "class_type": "OpenAIGPTImage1",
+    "_meta": {
+      "title": "OpenAI GPT Image 2"
+    }
+  },
+  "269": {
+    "inputs": {
+      "filename_prefix": "gpt-image-2",
+      "images": [
+        "268",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存图像"
+    }
+  },
+  "271": {
+    "inputs": {
+      "image": "128x128@2x.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "275": {
+    "inputs": {
+      "value": "shoe"
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "提示词"
+    }
+  }
+}
