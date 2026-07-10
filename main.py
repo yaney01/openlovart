@@ -1551,7 +1551,7 @@ async def upload_to_lsky(path):
     async with httpx.AsyncClient(timeout=AI_REQUEST_TIMEOUT) as client:
         if not token and IMAGE_HOST_USERNAME and IMAGE_HOST_PASSWORD:
             login_url = f"{api_root}/v1/tokens"
-            login = await client.post(login_url, data={"email": IMAGE_HOST_USERNAME, "password": IMAGE_HOST_PASSWORD})
+            login = await client.post(login_url, headers={"Accept": "application/json"}, data={"email": IMAGE_HOST_USERNAME, "password": IMAGE_HOST_PASSWORD})
             login.raise_for_status()
             payload = login.json()
             token = str(payload.get("data", {}).get("token") or payload.get("token") or "")
@@ -1559,7 +1559,7 @@ async def upload_to_lsky(path):
             raise HTTPException(status_code=400, detail="图床未配置 Token 或账号密码")
         with open(path, "rb") as fh:
             files = {"file": (os.path.basename(path), fh, content_type_for_path(path))}
-            resp = await client.post(f"{api_root}/v1/upload", headers={"Authorization": f"Bearer {token}"}, data={"strategy_id": "2"}, files=files)
+            resp = await client.post(f"{api_root}/v1/upload", headers={"Authorization": f"Bearer {token}", "Accept": "application/json"}, data={"strategy_id": "2"}, files=files)
         resp.raise_for_status()
         data = resp.json()
         return (
@@ -1585,6 +1585,7 @@ def upload_to_lsky_sync(path):
     if not token and IMAGE_HOST_USERNAME and IMAGE_HOST_PASSWORD:
         response = requests.post(
             f"{api_root}/v1/tokens",
+            headers={"Accept": "application/json"},
             data={"email": IMAGE_HOST_USERNAME, "password": IMAGE_HOST_PASSWORD},
             timeout=30,
         )
@@ -1612,7 +1613,7 @@ def post_lsky_file_sync(api_root, token, path):
         files = {"file": (os.path.basename(path), fh, content_type_for_path(path))}
         response = requests.post(
             f"{api_root}/v1/upload",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
             data={"strategy_id": "2"},
             files=files,
             timeout=AI_REQUEST_TIMEOUT,
