@@ -157,7 +157,7 @@
       "model": "",
       "ip_address": "https://integrate.api.nvidia.com/v1",
       "port": 0,
-      "api_key": "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"
+      "api_key": "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"
     },
     "class_type": "Expo Lmstudio Text Generation NV",
     "_meta": {
